@@ -24,7 +24,6 @@ jobs:
       - name: Build Web App & Android APK
         run: |
           npm install
-          npm install --save-dev vite
           npm run build
           npx cap sync android
           cd android
