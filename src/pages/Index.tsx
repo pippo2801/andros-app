@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  AlertCircle, BookOpen, Bot, CheckCircle2, Cpu, Menu, Plus, Send, Settings2,
+  AlertCircle, Archive, BookOpen, Bot, CheckCircle2, Cpu, Menu, Plus, Send, Settings2,
   Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
+import { ArchivePanel } from '../components/ArchivePanel';
+import { chooseModelForTask } from '../services/aiRouter';
 import {
   checkOllamaConnection,
   getOllamaConfig,
@@ -72,12 +74,14 @@ export default function Index() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [memoryRules, setMemoryRules] = useState<MemoryRule[]>(loadMemoryRules);
   const [ruleDraft, setRuleDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessageData[]>(loadHistory);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
+  const [activeModel, setActiveModel] = useState(config.model);
   const [endpointDraft, setEndpointDraft] = useState(config.endpoint);
   const [modelDraft, setModelDraft] = useState(config.model);
   const [connection, setConnection] = useState<ConnectionState>('unknown');
@@ -108,6 +112,11 @@ export default function Index() {
     setModelDraft(config.model);
     setSettingsError('');
     setSettingsOpen(true);
+    setIsSidebarOpen(false);
+  };
+
+  const openArchive = () => {
+    setArchiveOpen(true);
     setIsSidebarOpen(false);
   };
 
@@ -184,9 +193,21 @@ export default function Index() {
     setNotice('');
 
     try {
-      const responseText = await sendToOllama(updatedMessages, undefined, memoryRules.map((rule) => rule.text));
+      let models = availableModels;
+      if (!models.length) {
+        try {
+          models = await checkOllamaConnection();
+          setAvailableModels(models);
+        } catch {
+          // The request below will show the connection error with actionable guidance.
+        }
+      }
+      const route = chooseModelForTask(text, models, config.model);
+      setActiveModel(route.model);
+      const responseText = await sendToOllama(updatedMessages, route.model, memoryRules.map((rule) => rule.text));
       setMessages([...updatedMessages, { role: 'assistant', content: responseText }]);
       setConnection('online');
+      setNotice(`Router automatico · ${route.model} · ${route.reason}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
       setMessages([...updatedMessages, {
@@ -197,6 +218,12 @@ export default function Index() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLoadArchivedConversation = (title: string, archivedMessages: ChatMessageData[]) => {
+    const restored = archivedMessages.length ? archivedMessages : [WELCOME];
+    setMessages(restored);
+    setNotice(`Conversazione caricata: ${title}`);
   };
 
   const handleNewChat = () => {
@@ -246,7 +273,7 @@ export default function Index() {
             </div>
             <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
               {connection === 'online' ? <Wifi size={12} className="text-emerald-400" /> : connection === 'offline' ? <WifiOff size={12} className="text-amber-400" /> : <Cpu size={12} />}
-              <span className="truncate">{connectionLabel} · {config.model}</span>
+              <span className="truncate">{connectionLabel} · {activeModel}</span>
             </div>
           </div>
         </div>
@@ -277,6 +304,7 @@ export default function Index() {
         onClearHistory={handleClearHistory}
         onOpenSettings={openSettings}
         onOpenMemory={openMemory}
+        onOpenArchive={openArchive}
       />
 
       <section className="relative z-0 flex min-h-0 flex-1 flex-col">
@@ -340,9 +368,17 @@ export default function Index() {
               <Send size={18} />
             </button>
           </form>
-          <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">ANDROS OS · {config.model} · Le risposte possono contenere errori</p>
+          <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">ANDROS OS · Router automatico locale · {activeModel} · Le risposte possono contenere errori</p>
         </div>
       </section>
+
+      {archiveOpen && (
+        <ArchivePanel
+          onClose={() => setArchiveOpen(false)}
+          onLoadConversation={handleLoadArchivedConversation}
+          onNotice={setNotice}
+        />
+      )}
 
       {memoryOpen && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setMemoryOpen(false); }}>
