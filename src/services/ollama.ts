@@ -99,14 +99,22 @@ export async function checkOllamaConnection(): Promise<string[]> {
 export async function sendToOllama(
   messages: ChatMessageData[],
   modelOverride?: string,
+  approvedRules: string[] = [],
 ): Promise<string> {
   const config = getOllamaConfig();
   const model = modelOverride?.trim() || config.model;
 
   try {
+    const systemMessage = approvedRules.length
+      ? [{
+          role: 'system',
+          content: 'Regole permanenti approvate dall’utente. Rispettale quando sono pertinenti:\\n' +
+            approvedRules.map((rule) => `- ${rule}`).join('\\n'),
+        }]
+      : [];
     const data = await postJson(`${config.endpoint}/api/chat`, {
       model,
-      messages,
+      messages: [...systemMessage, ...messages],
       stream: false,
     });
     const content = data?.message?.content;
