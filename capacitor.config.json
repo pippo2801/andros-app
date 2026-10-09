@@ -1,5 +1,10 @@
 {
   "appId": "com.andros.app",
   "appName": "ANDROS OS",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
 }
