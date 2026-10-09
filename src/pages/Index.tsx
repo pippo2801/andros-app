@@ -1,96 +1,322 @@
-import React, { useState } from 'react';
-import { Menu, Send, Sparkles } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  AlertCircle, Bot, CheckCircle2, Cpu, Menu, Send, Settings2,
+  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
+} from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
-import { sendToOllama, ChatMessageData } from '../services/ollama';
+import {
+  checkOllamaConnection,
+  getOllamaConfig,
+  saveOllamaConfig,
+  sendToOllama,
+  type ChatMessageData,
+  type OllamaConfig,
+} from '../services/ollama';
+
+const HISTORY_KEY = 'andros.chat.history.v1';
+const WELCOME: ChatMessageData = {
+  role: 'assistant',
+  content: 'Ciao! Sono Andros, il tuo assistente personale. Posso aiutarti a ragionare, scrivere, programmare e lavorare sui tuoi progetti. Per rispondere uso il modello Ollama configurato nelle impostazioni.',
+};
+
+type ConnectionState = 'unknown' | 'checking' | 'online' | 'offline';
+
+function loadHistory(): ChatMessageData[] {
+  try {
+    const stored = localStorage.getItem(HISTORY_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (item) =>
+            item &&
+            (item.role === 'user' || item.role === 'assistant') &&
+            typeof item.content === 'string',
+        );
+      }
+    }
+  } catch (error) {
+    console.warn('Cronologia Andros non disponibile:', error);
+  }
+  return [WELCOME];
+}
 
 export default function Index() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessageData[]>([
-    { role: 'assistant', content: 'Ciao! Sono Andros, il tuo assistente offline potenziato da Ollama. Come posso aiutarti?' }
-  ]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessageData[]>(loadHistory);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
+  const [endpointDraft, setEndpointDraft] = useState(config.endpoint);
+  const [modelDraft, setModelDraft] = useState(config.model);
+  const [connection, setConnection] = useState<ConnectionState>('unknown');
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [settingsError, setSettingsError] = useState('');
+  const [notice, setNotice] = useState('');
+  const endRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
+  useEffect(() => {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(messages));
+    } catch (error) {
+      console.warn('Impossibile salvare la cronologia:', error);
+    }
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages, loading]);
 
-    const userMessage: ChatMessageData = { role: 'user', content: input.trim() };
-    const updatedMessages = [...messages, userMessage];
-    
+  const openSettings = () => {
+    setEndpointDraft(config.endpoint);
+    setModelDraft(config.model);
+    setSettingsError('');
+    setSettingsOpen(true);
+    setIsSidebarOpen(false);
+  };
+
+  const handleCheckConnection = async () => {
+    setSettingsError('');
+    setConnection('checking');
+    try {
+      const saved = saveOllamaConfig({ endpoint: endpointDraft, model: modelDraft });
+      setConfig(saved);
+      setEndpointDraft(saved.endpoint);
+      setModelDraft(saved.model);
+      const models = await checkOllamaConnection();
+      setAvailableModels(models);
+      setConnection('online');
+      setNotice(models.length ? `Ollama collegato · ${models.length} modelli disponibili` : 'Ollama raggiungibile, ma non risultano modelli installati.');
+    } catch (error) {
+      setConnection('offline');
+      setSettingsError(error instanceof Error ? error.message : 'Connessione non riuscita.');
+    }
+  };
+
+  const handleSaveSettings = () => {
+    try {
+      const saved = saveOllamaConfig({ endpoint: endpointDraft, model: modelDraft });
+      setConfig(saved);
+      setEndpointDraft(saved.endpoint);
+      setModelDraft(saved.model);
+      setConnection('unknown');
+      setSettingsError('');
+      setSettingsOpen(false);
+      setNotice('Impostazioni salvate su questo dispositivo.');
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : 'Impossibile salvare le impostazioni.');
+    }
+  };
+
+  const handleSend = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const text = input.trim();
+    if (!text || loading) return;
+
+    const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: text }];
     setMessages(updatedMessages);
     setInput('');
     setLoading(true);
+    setNotice('');
 
     try {
       const responseText = await sendToOllama(updatedMessages);
       setMessages([...updatedMessages, { role: 'assistant', content: responseText }]);
-    } catch (err: any) {
-      setMessages([...updatedMessages, { role: 'assistant', content: `Errore: ${err.message}` }]);
+      setConnection('online');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
+      setMessages([...updatedMessages, {
+        role: 'assistant',
+        content: `Non sono riuscito a completare la richiesta.\n\n${message}\n\nApri Impostazioni, controlla l’indirizzo di Ollama e verifica che il modello scelto sia installato.`,
+      }]);
+      setConnection('offline');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleNewChat = () => {
+    setMessages([WELCOME]);
+    setIsSidebarOpen(false);
+    setNotice('Nuova conversazione avviata.');
+  };
+
+  const handleClearHistory = () => {
+    setMessages([WELCOME]);
+    setIsSidebarOpen(false);
+    setNotice('Cronologia locale azzerata.');
+  };
+
+  const connectionLabel = connection === 'online'
+    ? 'Connesso'
+    : connection === 'checking'
+      ? 'Verifica…'
+      : connection === 'offline'
+        ? 'Non connesso'
+        : 'Locale · Ollama';
+
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-slate-800/80 bg-slate-900/50 backdrop-blur">
-        <button 
-          onClick={() => setIsSidebarOpen(true)}
-          className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors"
-        >
-          <Menu size={20} />
-        </button>
-        <div className="flex items-center space-x-2">
-          <Sparkles size={18} className="text-blue-400" />
-          <span className="font-semibold text-sm tracking-wide">ANDROS AI</span>
-        </div>
-        <div className="w-9" /> {/* Spaziatore per centrare il titolo */}
-      </header>
+    <main className="relative flex h-screen min-h-[100dvh] flex-col overflow-hidden bg-[#050914] text-slate-100">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-36 left-1/3 h-72 w-72 rounded-full bg-blue-600/10 blur-[100px]" />
+        <div className="absolute bottom-20 -right-32 h-80 w-80 rounded-full bg-cyan-500/10 blur-[110px]" />
+      </div>
 
-      {/* Sidebar */}
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)} 
-        onNewChat={() => setMessages([{ role: 'assistant', content: 'Nuova conversazione avviata. Dimmi pure!' }])}
-        onClearHistory={() => setMessages([])}
-      />
-
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, index) => (
-          <ChatMessage key={index} content={msg.content} role={msg.role} />
-        ))}
-        {loading && (
-          <div className="flex justify-start mb-4">
-            <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl rounded-bl-sm text-slate-400 text-sm animate-pulse">
-              Andros sta elaborando...
+      <header className="relative z-10 flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-slate-950/75 px-3 py-3 backdrop-blur-xl sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            aria-label="Apri menu"
+            onClick={() => setIsSidebarOpen(true)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/10"
+          >
+            <Menu size={19} />
+          </button>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/25 bg-gradient-to-br from-blue-500/20 to-cyan-400/10 text-cyan-300 shadow-lg shadow-cyan-950/30">
+            <Bot size={22} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-bold tracking-[0.18em]">ANDROS OS</span>
+              <span className="hidden rounded-md border border-cyan-400/20 bg-cyan-400/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-cyan-300 sm:inline">PERSONAL AI</span>
+            </div>
+            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
+              {connection === 'online' ? <Wifi size={12} className="text-emerald-400" /> : connection === 'offline' ? <WifiOff size={12} className="text-amber-400" /> : <Cpu size={12} />}
+              <span className="truncate">{connectionLabel} · {config.model}</span>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Input Form */}
-      <div className="p-4 border-t border-slate-800/80 bg-slate-900/30 backdrop-blur">
-        <form onSubmit={handleSend} className="flex items-center space-x-2 max-w-4xl mx-auto">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Scrivi un messaggio ad Andros..."
-            className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-colors"
-          />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
           <button
-            type="submit"
-            disabled={loading || !input.trim()}
-            className="p-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow-lg shadow-blue-600/20 hover:opacity-95 disabled:opacity-50 transition-all"
+            type="button"
+            aria-label="Nuova conversazione"
+            onClick={handleNewChat}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/10"
           >
-            <Send size={18} />
+            <MessageSquarePlus size={18} />
           </button>
-        </form>
-      </div>
-    </div>
+          <button
+            type="button"
+            aria-label="Impostazioni"
+            onClick={openSettings}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/10 hover:text-cyan-200"
+          >
+            <Settings2 size={19} />
+          </button>
+        </div>
+      </header>
+
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onNewChat={handleNewChat}
+        onClearHistory={handleClearHistory}
+      />
+
+      <section className="relative z-0 flex min-h-0 flex-1 flex-col">
+        <div className="flex-1 overflow-y-auto px-3 py-5 sm:px-6 sm:py-7">
+          {messages.length === 1 && messages[0]?.role === 'assistant' && (
+            <div className="mx-auto mb-7 mt-2 max-w-2xl text-center sm:mt-8">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-blue-500/20 to-cyan-400/10 text-cyan-200 shadow-2xl shadow-cyan-950/30">
+                <Sparkles size={28} />
+              </div>
+              <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Il tuo spazio, la tua intelligenza.</h1>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Un assistente personale collegato al modello che scegli. Le conversazioni restano salvate localmente su questo dispositivo.</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {['Aiutami a organizzare la giornata', 'Spiegami un concetto difficile', 'Aiutami con il codice'].map((suggestion) => (
+                  <button key={suggestion} type="button" onClick={() => setInput(suggestion)} className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/[0.07]">
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mx-auto max-w-3xl">
+            {messages.map((message, index) => (
+              <ChatMessage key={index} content={message.content} role={message.role} />
+            ))}
+            {loading && (
+              <div className="mb-4 flex justify-start">
+                <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-cyan-400/15 bg-slate-900/90 px-4 py-3 text-sm text-slate-300">
+                  <LoaderCircle size={16} className="animate-spin text-cyan-300" />
+                  Andros sta elaborando…
+                </div>
+              </div>
+            )}
+            <div ref={endRef} />
+          </div>
+        </div>
+
+        <div className="relative shrink-0 border-t border-white/[0.08] bg-slate-950/80 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6 sm:pt-4">
+          {notice && (
+            <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 text-xs text-slate-400">
+              <span>{notice}</span>
+              <button type="button" aria-label="Chiudi avviso" onClick={() => setNotice('')} className="text-slate-500 hover:text-white"><X size={14} /></button>
+            </div>
+          )}
+          <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-cyan-400/30">
+            <input
+              type="text"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="Scrivi ad Andros…"
+              aria-label="Messaggio per Andros"
+              autoComplete="off"
+              className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+            />
+            <button
+              type="submit"
+              disabled={loading || !input.trim()}
+              aria-label="Invia messaggio"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Send size={18} />
+            </button>
+          </form>
+          <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">ANDROS OS · {config.model} · Le risposte possono contenere errori</p>
+        </div>
+      </section>
+
+      {settingsOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="settings-title" className="w-full max-w-lg rounded-t-3xl border border-white/10 bg-[#0b1120] p-5 shadow-2xl sm:rounded-3xl sm:p-6">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200"><Settings2 size={20} /></div>
+                <h2 id="settings-title" className="text-lg font-semibold text-white">Connessione e modello</h2>
+                <p className="mt-1 text-sm leading-5 text-slate-400">Configura il server Ollama raggiungibile dal telefono.</p>
+              </div>
+              <button type="button" aria-label="Chiudi impostazioni" onClick={() => setSettingsOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white"><X size={19} /></button>
+            </div>
+
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-slate-300">Indirizzo Ollama</span>
+                <input value={endpointDraft} onChange={(event) => setEndpointDraft(event.target.value)} placeholder="http://127.0.0.1:11434" inputMode="url" autoCapitalize="none" autoCorrect="off" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400/50" />
+                <span className="mt-1.5 block text-[11px] leading-4 text-slate-500">Se Ollama gira su un PC, usa l’indirizzo IP del PC raggiungibile dalla stessa rete. 127.0.0.1 funziona solo se Ollama gira sul telefono stesso.</span>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-slate-300">Nome del modello</span>
+                <input value={modelDraft} onChange={(event) => setModelDraft(event.target.value)} placeholder="qwen2.5-coder:7b" autoCapitalize="none" autoCorrect="off" list="andros-model-list" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400/50" />
+                <datalist id="andros-model-list">{availableModels.map((model) => <option key={model} value={model} />)}</datalist>
+                {availableModels.length > 0 && <p className="mt-1.5 text-[11px] text-emerald-300">{availableModels.length} modelli rilevati sul server.</p>}
+              </label>
+
+              {settingsError && <div className="flex items-start gap-2 rounded-xl border border-rose-400/20 bg-rose-400/[0.07] p-3 text-xs leading-5 text-rose-200"><AlertCircle size={16} className="mt-0.5 shrink-0" /><span>{settingsError}</span></div>}
+              {connection === 'online' && !settingsError && <div className="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.07] p-3 text-xs text-emerald-200"><CheckCircle2 size={16} /> Connessione verificata.</div>}
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button type="button" onClick={handleCheckConnection} disabled={connection === 'checking'} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
+                  {connection === 'checking' ? <LoaderCircle size={16} className="animate-spin" /> : <Wifi size={16} />} Verifica
+                </button>
+                <button type="button" onClick={handleSaveSettings} className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white transition hover:brightness-110">Salva impostazioni</button>
+              </div>
+              <p className="text-[10px] leading-4 text-slate-500">La configurazione viene salvata sul dispositivo. Ollama deve essere avviato e raggiungibile; l’app non scarica automaticamente i modelli.</p>
+            </div>
+          </section>
+        </div>
+      )}
+    </main>
   );
 }
