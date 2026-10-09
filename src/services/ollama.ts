@@ -108,8 +108,8 @@ export async function sendToOllama(
     const systemMessage = approvedRules.length
       ? [{
           role: 'system',
-          content: 'Regole permanenti approvate dall’utente. Rispettale quando sono pertinenti:\\n' +
-            approvedRules.map((rule) => `- ${rule}`).join('\\n'),
+          content: 'Regole permanenti approvate dall’utente. Rispettale quando sono pertinenti:\n' +
+            approvedRules.map((rule) => `- ${rule}`).join('\n'),
         }]
       : [];
     const data = await postJson(`${config.endpoint}/api/chat`, {
