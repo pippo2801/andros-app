@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  AlertCircle, Archive, BookOpen, Bot, CheckCircle2, Cpu, Menu, Plus, Send, Settings2,
+  AlertCircle, BookOpen, Bot, CheckCircle2, Cpu, Menu, Plus, Send, Settings2,
   Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
@@ -377,6 +377,7 @@ export default function Index() {
           onClose={() => setArchiveOpen(false)}
           onLoadConversation={handleLoadArchivedConversation}
           onNotice={setNotice}
+          currentMessages={messages}
         />
       )}
 
