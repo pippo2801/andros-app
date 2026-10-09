@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, MessageSquarePlus, Settings2, Trash2, X } from 'lucide-react';
+import { BookOpen, Bot, MessageSquarePlus, Settings2, Trash2, X } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -7,6 +7,7 @@ interface SidebarProps {
   onNewChat: () => void;
   onClearHistory: () => void;
   onOpenSettings: () => void;
+  onOpenMemory: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -15,6 +16,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNewChat,
   onClearHistory,
   onOpenSettings,
+  onOpenMemory,
 }) => {
   if (!isOpen) return null;
 
@@ -59,6 +61,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <Settings2 size={18} className="text-cyan-300" />
             <span>Connessione e modello</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenMemory}
+            className="flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-slate-300 transition hover:bg-white/[0.07]"
+          >
+            <BookOpen size={18} className="text-cyan-300" />
+            <span>Memoria e regole permanenti</span>
           </button>
         </div>
 
