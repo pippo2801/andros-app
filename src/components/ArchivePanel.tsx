@@ -15,9 +15,10 @@ interface ArchivePanelProps {
   onClose: () => void;
   onLoadConversation: (title: string, messages: ChatMessageData[]) => void;
   onNotice: (message: string) => void;
+  currentMessages: ChatMessageData[];
 }
 
-export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConversation, onNotice }) => {
+export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConversation, onNotice, currentMessages }) => {
   const [conversations, setConversations] = useState<ArchivedConversation[]>(loadArchivedConversations);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
@@ -29,6 +30,30 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
   const persist = (next: ArchivedConversation[]) => {
     saveArchivedConversations(next);
     setConversations(next);
+  };
+
+  const saveCurrentConversation = () => {
+    const meaningful = currentMessages.filter((message) => message.content.trim());
+    if (!meaningful.length) {
+      setError('La conversazione corrente è vuota.');
+      return;
+    }
+    const firstUser = meaningful.find((message) => message.role === 'user');
+    const title = firstUser?.content.trim().slice(0, 72) || 'Conversazione Andros';
+    const saved: ArchivedConversation = {
+      id: `andros-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title,
+      source: 'Andros OS · locale',
+      importedAt: Date.now(),
+      messages: meaningful.map((message) => ({ role: message.role, content: message.content })),
+    };
+    try {
+      persist([...conversations, saved]);
+      setStatus('Conversazione corrente salvata nell’archivio locale.');
+      setError('');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Impossibile salvare la conversazione.');
+    }
   };
 
   const importFiles = async (files: FileList | null) => {
@@ -100,8 +125,9 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
         </header>
 
         <div className="space-y-3 border-b border-white/[0.08] p-4 sm:p-5">
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white hover:brightness-110"><Upload size={16} /> Importa conversazioni</button>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white hover:brightness-110"><Upload size={16} /> Importa chat</button>
+            <button type="button" onClick={saveCurrentConversation} className="flex items-center justify-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-3 text-sm font-medium text-cyan-100 hover:bg-cyan-400/[0.12]"><MessageSquareText size={16} /> Salva chat corrente</button>
             <button type="button" onClick={exportAll} disabled={!conversations.length} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-medium text-slate-200 hover:bg-white/10 disabled:opacity-40"><Download size={16} /> Esporta archivio</button>
           </div>
           <input ref={fileRef} type="file" accept=".json,.txt,.md,.html,.htm,.csv,application/json,text/plain,text/html" multiple className="hidden" onChange={(event) => void importFiles(event.target.files)} />
