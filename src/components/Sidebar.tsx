@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Bot, MessageSquarePlus, Settings2, Trash2, X } from 'lucide-react';
+import { Archive, BookOpen, Bot, MessageSquarePlus, Settings2, Trash2, X } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface SidebarProps {
   onClearHistory: () => void;
   onOpenSettings: () => void;
   onOpenMemory: () => void;
+  onOpenArchive: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -17,6 +18,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClearHistory,
   onOpenSettings,
   onOpenMemory,
+  onOpenArchive,
 }) => {
   if (!isOpen) return null;
 
@@ -61,6 +63,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <Settings2 size={18} className="text-cyan-300" />
             <span>Connessione e modello</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenArchive}
+            className="flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-slate-300 transition hover:bg-white/[0.07]"
+          >
+            <Archive size={18} className="text-cyan-300" />
+            <span>Archivio universale delle chat</span>
           </button>
           <button
             type="button"
