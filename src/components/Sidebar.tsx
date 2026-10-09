@@ -1,75 +1,86 @@
 import React from 'react';
-import { MessageSquare, Image, Terminal, Trash2, X } from 'lucide-react';
+import { Bot, MessageSquarePlus, Settings2, Trash2, X } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onNewChat: () => void;
   onClearHistory: () => void;
+  onOpenSettings: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNewChat, onClearHistory }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  isOpen,
+  onClose,
+  onNewChat,
+  onClearHistory,
+  onOpenSettings,
+}) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <button
+        type="button"
+        aria-label="Chiudi menu"
+        className="fixed inset-0 cursor-default bg-black/65 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
-      <div className="relative w-72 bg-slate-950 border-r border-slate-800 flex flex-col h-full text-slate-200 z-10 shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-slate-800">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold">
-              A
+      <aside className="relative z-10 flex h-full w-[min(19rem,86vw)] flex-col border-r border-white/10 bg-[#080d19] text-slate-200 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-white/[0.08] p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
+              <Bot size={22} />
             </div>
             <div>
-              <h1 className="font-semibold text-sm tracking-wide">ANDROS</h1>
-              <p className="text-xs text-slate-400">Assistente autonomo</p>
+              <h1 className="text-sm font-bold tracking-[0.16em]">ANDROS OS</h1>
+              <p className="mt-0.5 text-xs text-slate-500">Assistente personale</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white">
-            <X size={20} />
+          <button type="button" aria-label="Chiudi menu" onClick={onClose} className="rounded-lg p-2 text-slate-400 transition hover:bg-white/10 hover:text-white">
+            <X size={19} />
           </button>
         </div>
 
-        <div className="p-3 space-y-2">
-          <button 
+        <div className="space-y-2 p-3">
+          <button
+            type="button"
             onClick={onNewChat}
-            className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium text-sm shadow-lg shadow-blue-600/20 hover:opacity-95 transition-all"
+            className="flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-950/30 transition hover:brightness-110"
           >
-            <MessageSquare size={18} />
+            <MessageSquarePlus size={18} />
             <span>Nuova conversazione</span>
           </button>
-          
-          <button className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-900 text-slate-300 text-sm transition-colors">
-            <Image size={18} className="text-slate-400" />
-            <span>Immagini</span>
-          </button>
-
-          <button className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-slate-900 text-slate-300 text-sm transition-colors">
-            <Terminal size={18} className="text-slate-400" />
-            <span>Hacker Mode</span>
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-slate-300 transition hover:bg-white/[0.07]"
+          >
+            <Settings2 size={18} className="text-cyan-300" />
+            <span>Connessione e modello</span>
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-2">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 mb-2">Cronologia</div>
-          <div className="space-y-1">
-            <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60 text-xs text-slate-300 truncate cursor-pointer hover:bg-slate-900">
-              Voglio trasformare te in un apk per android
-            </div>
+        <div className="flex-1 px-4 py-4">
+          <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Memoria locale</div>
+          <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+            <p className="text-xs leading-5 text-slate-400">La conversazione corrente viene salvata su questo dispositivo e resta disponibile quando riapri l’app.</p>
           </div>
         </div>
 
-        <div className="p-3 border-t border-slate-800">
-          <button 
+        <div className="border-t border-white/[0.08] p-3">
+          <button
+            type="button"
             onClick={onClearHistory}
-            className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 text-sm transition-colors"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-300"
           >
             <Trash2 size={16} />
-            <span>Svuota cronologia</span>
+            <span>Azzera conversazione</span>
           </button>
+          <p className="px-3 pb-1 pt-2 text-[10px] text-slate-600">ANDROS OS · build in sviluppo</p>
         </div>
-      </div>
+      </aside>
     </div>
   );
 };
