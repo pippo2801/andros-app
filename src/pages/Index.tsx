@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  AlertCircle, Bot, CheckCircle2, Cpu, Menu, Send, Settings2,
+  AlertCircle, BookOpen, Bot, CheckCircle2, Cpu, Menu, Plus, Send, Settings2,
   Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
@@ -15,6 +15,32 @@ import {
 } from '../services/ollama';
 
 const HISTORY_KEY = 'andros.chat.history.v1';
+const RULES_KEY = 'andros.memory.rules.v1';
+
+interface MemoryRule {
+  id: string;
+  text: string;
+  createdAt: number;
+}
+
+function loadMemoryRules(): MemoryRule[] {
+  try {
+    const stored = localStorage.getItem(RULES_KEY);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is MemoryRule =>
+        item &&
+        typeof item.id === 'string' &&
+        typeof item.text === 'string' &&
+        typeof item.createdAt === 'number',
+    );
+  } catch (error) {
+    console.warn('Regole permanenti non disponibili:', error);
+    return [];
+  }
+}
 const WELCOME: ChatMessageData = {
   role: 'assistant',
   content: 'Ciao! Sono Andros, il tuo assistente personale. Posso aiutarti a ragionare, scrivere, programmare e lavorare sui tuoi progetti. Per rispondere uso il modello Ollama configurato nelle impostazioni.',
@@ -45,6 +71,9 @@ function loadHistory(): ChatMessageData[] {
 export default function Index() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  const [memoryRules, setMemoryRules] = useState<MemoryRule[]>(loadMemoryRules);
+  const [ruleDraft, setRuleDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessageData[]>(loadHistory);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -66,12 +95,48 @@ export default function Index() {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, loading]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(RULES_KEY, JSON.stringify(memoryRules));
+    } catch (error) {
+      console.warn('Impossibile salvare le regole permanenti:', error);
+    }
+  }, [memoryRules]);
+
   const openSettings = () => {
     setEndpointDraft(config.endpoint);
     setModelDraft(config.model);
     setSettingsError('');
     setSettingsOpen(true);
     setIsSidebarOpen(false);
+  };
+
+  const openMemory = () => {
+    setRuleDraft('');
+    setMemoryOpen(true);
+    setIsSidebarOpen(false);
+  };
+
+  const handleSaveRule = () => {
+    const text = ruleDraft.trim();
+    if (!text) return;
+    if (memoryRules.some((rule) => rule.text.toLocaleLowerCase() === text.toLocaleLowerCase())) {
+      setNotice('Questa regola è già presente nella memoria.');
+      return;
+    }
+    const newRule: MemoryRule = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      text,
+      createdAt: Date.now(),
+    };
+    setMemoryRules((current) => [...current, newRule]);
+    setRuleDraft('');
+    setNotice('Regola permanente salvata e approvata da te.');
+  };
+
+  const handleDeleteRule = (id: string) => {
+    setMemoryRules((current) => current.filter((rule) => rule.id !== id));
+    setNotice('Regola rimossa dalla memoria permanente.');
   };
 
   const handleCheckConnection = async () => {
@@ -119,7 +184,7 @@ export default function Index() {
     setNotice('');
 
     try {
-      const responseText = await sendToOllama(updatedMessages);
+      const responseText = await sendToOllama(updatedMessages, undefined, memoryRules.map((rule) => rule.text));
       setMessages([...updatedMessages, { role: 'assistant', content: responseText }]);
       setConnection('online');
     } catch (error) {
@@ -211,6 +276,7 @@ export default function Index() {
         onNewChat={handleNewChat}
         onClearHistory={handleClearHistory}
         onOpenSettings={openSettings}
+        onOpenMemory={openMemory}
       />
 
       <section className="relative z-0 flex min-h-0 flex-1 flex-col">
@@ -277,6 +343,52 @@ export default function Index() {
           <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">ANDROS OS · {config.model} · Le risposte possono contenere errori</p>
         </div>
       </section>
+
+      {memoryOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setMemoryOpen(false); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="memory-title" className="w-full max-w-lg rounded-t-3xl border border-white/10 bg-[#0b1120] p-5 shadow-2xl sm:rounded-3xl sm:p-6">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200"><BookOpen size={20} /></div>
+                <h2 id="memory-title" className="text-lg font-semibold text-white">Memoria e regole permanenti</h2>
+                <p className="mt-1 text-sm leading-5 text-slate-400">Le regole che scrivi e salvi qui vengono applicate alle richieste successive. Nessuna regola viene aggiunta senza la tua conferma.</p>
+              </div>
+              <button type="button" aria-label="Chiudi memoria" onClick={() => setMemoryOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white"><X size={19} /></button>
+            </div>
+
+            <form onSubmit={(event) => { event.preventDefault(); handleSaveRule(); }} className="space-y-3">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-slate-300">Nuova regola</span>
+                <textarea value={ruleDraft} onChange={(event) => setRuleDraft(event.target.value)} maxLength={500} rows={3} placeholder="Esempio: prima di modificare file importanti, crea un backup." className="w-full resize-y rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm leading-5 text-white outline-none transition focus:border-cyan-400/50" />
+              </label>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] text-slate-500">{ruleDraft.length}/500 caratteri</span>
+                <button type="submit" disabled={!ruleDraft.trim()} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"><Plus size={16} /> Salva e approva</button>
+              </div>
+            </form>
+
+            <div className="mt-5 border-t border-white/[0.08] pt-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">Regole salvate</h3>
+                <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-slate-400">{memoryRules.length}</span>
+              </div>
+              {memoryRules.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-white/10 px-3 py-5 text-center text-xs leading-5 text-slate-500">Non hai ancora salvato regole permanenti.</p>
+              ) : (
+                <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                  {memoryRules.map((rule) => (
+                    <li key={rule.id} className="flex items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
+                      <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm leading-5 text-slate-200">{rule.text}</p>
+                      <button type="button" aria-label="Elimina regola" title="Elimina regola" onClick={() => handleDeleteRule(rule.id)} className="shrink-0 rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-300"><Trash2 size={15} /></button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-3 text-[10px] leading-4 text-slate-500">La memoria è conservata in locale su questo dispositivo. Le regole vengono inviate al modello Ollama come contesto di sistema quando invii un messaggio.</p>
+            </div>
+          </section>
+        </div>
+      )}
 
       {settingsOpen && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false); }}>
