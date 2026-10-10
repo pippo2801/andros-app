@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle, BookOpen, Bot, CheckCircle2, Cpu, Menu, Plus, Send, Settings2,
   Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
-  ShieldCheck, ExternalLink, RefreshCw, Mic,
+  ShieldCheck, ExternalLink, RefreshCw, Mic, Languages,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
+import { TranslationPanel } from '../components/TranslationPanel';
 import { ArchivePanel } from '../components/ArchivePanel';
 import { chooseModelForTask } from '../services/aiRouter';
 import { recognizeOnce, speakText } from '../services/voice';
@@ -82,6 +83,7 @@ export default function Index() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [translationOpen, setTranslationOpen] = useState(false);
   const [memoryRules, setMemoryRules] = useState<MemoryRule[]>(loadMemoryRules);
   const [ruleDraft, setRuleDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessageData[]>(loadHistory);
@@ -342,6 +344,15 @@ export default function Index() {
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
+            aria-label="Traduttore multilingue"
+            title="Traduttore multilingue"
+            onClick={() => setTranslationOpen(true)}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07] text-cyan-200 transition hover:bg-cyan-400/15"
+          >
+            <Languages size={18} />
+          </button>
+          <button
+            type="button"
             aria-label="Nuova conversazione"
             onClick={handleNewChat}
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/10"
@@ -443,6 +454,13 @@ export default function Index() {
           <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">ANDROS OS · Router automatico locale · {activeModel} · La dettatura trascrive la voce ma non autentica chi parla</p>
         </div>
       </section>
+
+      {translationOpen && (
+        <TranslationPanel
+          onClose={() => setTranslationOpen(false)}
+          onNotice={setNotice}
+        />
+      )}
 
       {archiveOpen && (
         <ArchivePanel
