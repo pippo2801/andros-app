@@ -228,7 +228,7 @@ public final class AndrosLiveTranslationService extends Service {
     private void processFrame(Bitmap bitmap) {
         InputImage input = InputImage.fromBitmap(bitmap, 0);
         recognizer.process(input)
-            .addOnSuccessListener(worker::post, result -> {
+            .addOnSuccessListener(command -> worker.post(command), result -> {
                 String original = extractText(result);
                 if (original.isEmpty()) {
                     tryFallbackRecognizer(input, bitmap, 0);
@@ -259,7 +259,7 @@ public final class AndrosLiveTranslationService extends Service {
             return;
         }
         fallbackRecognizers.get(index).process(input)
-            .addOnSuccessListener(worker::post, result -> {
+            .addOnSuccessListener(command -> worker.post(command), result -> {
                 String original = extractText(result);
                 if (original.isEmpty()) {
                     tryFallbackRecognizer(input, bitmap, index + 1);
