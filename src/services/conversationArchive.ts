@@ -187,7 +187,7 @@ export function parseArchiveFile(name: string, content: string): ArchivedConvers
   if (lower.endsWith('.csv')) return parseCsv(content, name);
   if (lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.html') || lower.endsWith('.htm')) {
     const withoutHtml = lower.endsWith('.html') || lower.endsWith('.htm')
-      ? content.replace(/<script[\\s\\S]*?<\\/script>/gi, ' ').replace(/<style[\\s\\S]*?<\\/style>/gi, ' ').replace(/<[^>]+>/g, '\\n').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/[ \\t]+/g, ' ').replace(/\\n{3,}/g, '\\n\\n')
+      ? content.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, '\n').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n')
       : content;
     return parsePlainText(withoutHtml, name);
   }
@@ -205,7 +205,7 @@ export async function parseArchiveUpload(file: File): Promise<ArchivedConversati
     throw new Error('Archivio ZIP non valido o danneggiato.');
   }
   const entries = Object.entries(files).filter(([path]) => !path.startsWith('__MACOSX/') && !path.endsWith('/'));
-  const chatJson = entries.filter(([path]) => /(^|\\/)conversations(?:_\\d+)?\\.json$/i.test(path));
+  const chatJson = entries.filter(([path]) => /(^|\/)conversations(?:_\d+)?\.json$/i.test(path));
   const conversations: ArchivedConversation[] = [];
   for (const [path, bytes] of chatJson) {
     try {
@@ -215,7 +215,7 @@ export async function parseArchiveUpload(file: File): Promise<ArchivedConversati
     }
   }
   if (conversations.length) return conversations;
-  const likelyHtml = entries.filter(([path]) => /gemini|myactivity|copilot|chat/i.test(path) && /\\.html?$/i.test(path));
+  const likelyHtml = entries.filter(([path]) => /gemini|myactivity|copilot|chat/i.test(path) && /\.html?$/i.test(path));
   for (const [path, bytes] of likelyHtml.slice(0, 50)) {
     const imported = parseArchiveFile(path.split('/').pop() || path, strFromU8(bytes));
     if (imported.length) conversations.push(...imported);
