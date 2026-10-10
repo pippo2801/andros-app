@@ -1,19 +1,22 @@
 # ANDROS OS — assistente personale Android
 
-Andros OS è un'app Android basata su React, Vite e Capacitor, pensata per funzionare senza abbonamenti obbligatori. La modalità AI attuale usa Ollama: il modello gira su un dispositivo o un PC controllato dall'utente e non richiede una chiave API a pagamento.
+Andros OS è un'app Android basata su React, Vite e Capacitor, progettata per restare utilizzabile senza abbonamenti obbligatori. La modalità locale usa Ollama; Gemini API è un provider facoltativo con livello gratuito e limiti propri.
 
-## Funzioni implementate
+## Funzioni disponibili in questa versione
 
-- Chat locale con cronologia persistente sul dispositivo.
-- Memoria di regole permanenti: una regola entra in memoria solo quando l'utente la salva e approva.
-- Router automatico locale: classifica la richiesta (codice, ragionamento, scrittura, visione o generale) e sceglie tra i modelli Ollama installati.
-- Configurazione dell'endpoint Ollama e scelta del modello preferito.
-- Archivio conversazioni locale: importazione JSON/TXT/MD/HTML/CSV, ricerca full-text, salvataggio della chat corrente, ripristino di una conversazione ed esportazione dell'archivio.
-- Nessun obbligo di account o API a pagamento per la modalità locale.
+- Chat locale e cronologia persistente sul dispositivo.
+- Regole permanenti salvate solo dopo approvazione esplicita.
+- Router automatico: distingue attività di codice, ragionamento, scrittura, visione e richieste generali.
+- Ollama locale, con scelta tra i modelli già installati.
+- Provider Gemini 2.5 Flash facoltativo, attivabile con una chiave API ottenuta da Google AI Studio. La chiave resta in `sessionStorage`, non viene inserita nei file del repository e viene richiesta nuovamente in una nuova sessione.
+- Strategia AI selezionabile: automatica, solo Ollama oppure Gemini. In modalità automatica Andros privilegia Ollama per il codice e può usare Gemini per altri compiti quando è configurato; in caso di errore locale può ripiegare su Gemini.
+- Archivio locale: importazione JSON, TXT, MD, HTML, CSV e ZIP. Può leggere direttamente gli ZIP ChatGPT che contengono `conversations.json`; supporta CSV con colonne prompt/response e dati testuali generici. Ricerca, ripristino, salvataggio della chat corrente ed esportazione.
+- Accesso OAuth Google e backup/sincronizzazione dell'archivio e delle regole tramite la file JSON visibile in Google Drive, dopo la configurazione del progetto OAuth.
+- Collegamenti per aprire ChatGPT, Copilot e Gemini nei rispettivi servizi, senza fingere un accesso alle loro chat private.
 
-## Avvio sviluppo
+## Installazione e build
 
-Prerequisiti: Node.js 22, npm, JDK 21, Android SDK e un'installazione di Ollama raggiungibile dalla rete.
+Prerequisiti: Node.js 22, npm, JDK 21, Android SDK e, per la modalità locale, Ollama.
 
 ```bash
 npm install
@@ -25,30 +28,54 @@ cd android
 
 APK debug: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-## Scaricare un APK di test
-
-Il workflow GitHub Actions `Build Android APK` compila la UI, sincronizza Capacitor, costruisce l'APK debug e lo carica come artefatto `ANDROS-OS-debug-apk`. Gli artefatti temporanei hanno una durata limitata; per scaricare l'APK apri il workflow della build riuscita, sezione Artifacts.
+Il workflow GitHub Actions **Build Android APK** produce l'artefatto `ANDROS-OS-debug-apk`. La build CI dimostra che il progetto si compila; non sostituisce il test di login e sincronizzazione su un telefono fisico.
 
 ## Collegare Ollama
 
-1. Avvia Ollama sul dispositivo o sul PC.
-2. Installa almeno un modello gratuito, ad esempio un modello coder adatto alla memoria disponibile.
-3. Se Ollama gira sul PC, fai in modo che il telefono raggiunga l'indirizzo IP del PC e configura l'endpoint nelle impostazioni dell'app (porta predefinita 11434).
-4. Usa **Verifica** per vedere i modelli installati.
+1. Avvia Ollama sul dispositivo o sul PC e installa almeno un modello.
+2. Se Ollama gira sul PC, configura l'indirizzo IP del PC raggiungibile dal telefono e la porta 11434.
+3. Premi **Verifica** nelle impostazioni.
 
-L'endpoint `127.0.0.1` indica il dispositivo stesso: non punta automaticamente al PC. Non esporre Ollama direttamente su Internet; su reti non fidate usa una rete privata e regole firewall appropriate.
+`127.0.0.1` indica il dispositivo stesso, non il PC. Non esporre Ollama direttamente a Internet.
 
-## Archivio delle vecchie chat
+## Attivare Gemini (opzionale)
 
-L'archivio è locale e non accede autonomamente agli account di ChatGPT, Copilot o Gemini. Per ChatGPT, importa `conversations.json` estratto dall'esportazione dati. Per altri servizi, importa un file JSON o testuale compatibile. L'accesso Google non conferisce da solo permessi alle conversazioni di altri fornitori.
+1. Crea una chiave in [Google AI Studio](https://aistudio.google.com/apikey).
+2. In Andros apri **Impostazioni → Chiave Gemini API**, inserisci la chiave e premi **Applica chiave**.
+3. Scegli **Automatica** o **Gemini API**.
 
-## Stato dichiarato con trasparenza
+La chiave resta nella sessione corrente. Il livello gratuito è soggetto a disponibilità, limiti e condizioni Google; non inviare contenuti sensibili se non hai verificato le condizioni del provider. Se non configuri la chiave, Andros continua a usare Ollama.
 
-- Il router attuale sceglie tra i modelli locali Ollama installati; non chiama automaticamente le app consumer ChatGPT, Copilot o Gemini.
-- Il pulsante di accesso Google e la sincronizzazione cloud non sono attivi in questa build: richiedono un client OAuth configurato e un flusso Android supportato. Non simuliamo un login e non chiediamo password Google nell'app.
-- L'archivio è locale fino a quando non si esporta o copia il file su un altro dispositivo.
-- Questa è una build di test, non una release firmata per distribuzione.
+## Attivare Google Drive Sync
 
-## Sicurezza
+Il login è reale, ma richiede la configurazione OAuth del proprietario del progetto: nessuna app può autenticarsi con il tuo account senza che il progetto abbia un client OAuth valido.
 
-Non inserire chiavi API nel codice o committarle nel repository. Se una chiave è stata esposta nella cronologia Git, revocala nel relativo provider. Prima di importare archivi, considera che possono contenere dati personali. L'archivio resta sul dispositivo finché l'utente non lo esporta.
+1. In Google Cloud crea un progetto e abilita **Google Drive API**.
+2. Configura la schermata di consenso OAuth e aggiungi l'account di test.
+3. Crea il client OAuth Android con package `com.andros.app` e il certificato SHA-1 della build che stai installando. La configurazione di debug e quella di release possono avere SHA-1 diversi.
+4. Inserisci il Client ID completo nelle impostazioni **Account Google e sincronizzazione**.
+5. Premi **Accedi con Google**, autorizza l'ambito minimo richiesto e poi **Sincronizza**.
+
+Andros richiede `openid`, `email`, `profile` e `drive.file`. La sincronizzazione crea o aggiorna il file `andros-os-sync-v1.json` nella tua area Drive, visibile e gestibile da te; non legge l'intera cartella Drive. Il token d'accesso resta in memoria durante la sessione e non viene salvato su disco. Per usare la sincronizzazione su più dispositivi, configura lo stesso progetto OAuth e autorizza l'account su ciascuno. Il primo login va verificato su dispositivo reale: le impostazioni OAuth e il certificato devono corrispondere alla build.
+
+## ChatGPT, Gemini e Copilot: cosa può importare Andros
+
+- **ChatGPT:** esporta i dati da Impostazioni → Controlli dei dati → Esporta, estrai lo ZIP e puoi importarlo direttamente nell'archivio Andros.
+- **Gemini:** usa Google Takeout per esportare i dati Gemini; il formato esatto può variare, quindi verifica il contenuto dopo l'importazione.
+- **Copilot:** la cronologia di attività personale può essere esportata dal dashboard privacy Microsoft in CSV; per Copilot/Microsoft 365 usa l'esportazione disponibile per il tuo account.
+
+Le esportazioni sono file forniti dall'utente. L'autenticazione Google **non** autorizza Andros a leggere automaticamente le chat di ChatGPT o Copilot. ChatGPT e Copilot non sono collegati come provider API automatici in questa versione; i pulsanti aprono i servizi ufficiali e l'archivio permette l'importazione dei file esportati. Non automatizziamo l'estrazione di cookie, password o sessioni private.
+
+## Costi e limiti
+
+- Ollama: software gratuito/open source; il costo hardware/energia resta a carico dell'utente.
+- Gemini API: piano gratuito disponibile per alcuni modelli con limiti e condizioni del provider; non è una garanzia di disponibilità illimitata.
+- OAuth e Drive: uso dell'area dati di Drive secondo le quote Google. La configurazione OAuth deve essere eseguita dal proprietario del progetto.
+- ChatGPT/Copilot: collegamento diretto alle API consumer non disponibile in questa build; apertura web e importazione export non richiedono un'API a pagamento.
+
+## Sicurezza e stato
+
+- Nessuna password Google, ChatGPT o Microsoft viene chiesta all'interno di Andros.
+- Le chiavi API non devono essere committate nel repository.
+- I backup cloud includono le conversazioni archiviate e le regole approvate: importa e sincronizza solo contenuti che vuoi conservare su Drive.
+- Questa è una build di test. Login e sync vanno verificati con il Client ID OAuth del progetto e su dispositivo fisico prima di considerare completata la release.

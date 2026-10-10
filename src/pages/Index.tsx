@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Browser } from '@capacitor/browser';
 import {
-  AlertCircle, BookOpen, Bot, CheckCircle2, Cpu, Menu, Plus, Send, Settings2,
+  AlertCircle, BookOpen, Bot, CheckCircle2, Cloud, Cpu, Menu, Plus, Send, Settings2,
   Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
 import { ArchivePanel } from '../components/ArchivePanel';
 import { chooseModelForTask } from '../services/aiRouter';
+import { getGeminiApiKey, sendToGemini, setGeminiApiKey } from '../services/gemini';
+import { GoogleSyncPanel } from '../components/GoogleSyncPanel';
 import {
   checkOllamaConnection,
   getOllamaConfig,
@@ -75,6 +78,14 @@ export default function Index() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [googleOpen, setGoogleOpen] = useState(false);
+  const [geminiKeyDraft, setGeminiKeyDraft] = useState(getGeminiApiKey);
+  const [aiMode, setAiMode] = useState<'auto' | 'ollama' | 'gemini'>(() => {
+    try {
+      const stored = localStorage.getItem('andros.ai.mode.v1');
+      return stored === 'ollama' || stored === 'gemini' ? stored : 'auto';
+    } catch { return 'auto'; }
+  });
   const [memoryRules, setMemoryRules] = useState<MemoryRule[]>(loadMemoryRules);
   const [ruleDraft, setRuleDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessageData[]>(loadHistory);
@@ -113,6 +124,11 @@ export default function Index() {
     setSettingsError('');
     setSettingsOpen(true);
     setIsSidebarOpen(false);
+  };
+
+  const openGoogleSync = () => {
+    setGoogleOpen(true);
+    setSettingsOpen(false);
   };
 
   const openArchive = () => {
@@ -203,11 +219,40 @@ export default function Index() {
         }
       }
       const route = chooseModelForTask(text, models, config.model);
-      setActiveModel(route.model);
-      const responseText = await sendToOllama(updatedMessages, route.model, memoryRules.map((rule) => rule.text));
+      const geminiKey = getGeminiApiKey();
+      const wantsGemini = aiMode === 'gemini' || (aiMode === 'auto' && Boolean(geminiKey) && route.category !== 'coding' && route.category !== 'vision');
+      let responseText: string;
+      let providerLabel: string;
+      if (wantsGemini) {
+        if (!geminiKey) throw new Error('Hai selezionato Gemini ma manca la chiave API. Apri Impostazioni e inserisci una chiave gratuita di Google AI Studio.');
+        try {
+          responseText = await sendToGemini(updatedMessages, geminiKey, memoryRules.map((rule) => rule.text));
+          providerLabel = 'Gemini API · livello gratuito';
+          setActiveModel('gemini-2.5-flash');
+        } catch (geminiError) {
+          if (aiMode !== 'auto' || !models.length) throw geminiError;
+          responseText = await sendToOllama(updatedMessages, route.model, memoryRules.map((rule) => rule.text));
+          providerLabel = `Ollama fallback · ${route.model}`;
+          setActiveModel(route.model);
+        }
+      } else {
+        try {
+          responseText = await sendToOllama(updatedMessages, route.model, memoryRules.map((rule) => rule.text));
+          providerLabel = `Ollama · ${route.model}`;
+          setActiveModel(route.model);
+        } catch (localError) {
+          if (aiMode === 'auto' && geminiKey && route.category !== 'vision') {
+            responseText = await sendToGemini(updatedMessages, geminiKey, memoryRules.map((rule) => rule.text));
+            providerLabel = 'Gemini API · fallback gratuito';
+            setActiveModel('gemini-2.5-flash');
+          } else {
+            throw localError;
+          }
+        }
+      }
       setMessages([...updatedMessages, { role: 'assistant', content: responseText }]);
       setConnection('online');
-      setNotice(`Router automatico · ${route.model} · ${route.reason}`);
+      setNotice(`Router automatico · ${providerLabel} · ${route.reason}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
       setMessages([...updatedMessages, {
@@ -372,6 +417,13 @@ export default function Index() {
         </div>
       </section>
 
+      {googleOpen && (
+        <GoogleSyncPanel
+          onClose={() => setGoogleOpen(false)}
+          onSynced={(rules) => setMemoryRules(rules.filter((rule) => rule && typeof rule.id === 'string' && typeof rule.text === 'string' && typeof rule.createdAt === 'number'))}
+        />
+      )}
+
       {archiveOpen && (
         <ArchivePanel
           onClose={() => setArchiveOpen(false)}
@@ -440,6 +492,43 @@ export default function Index() {
             </div>
 
             <div className="space-y-4">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-slate-300">Strategia AI</span>
+                <select value={aiMode} onChange={(event) => {
+                  const next = event.target.value as 'auto' | 'ollama' | 'gemini';
+                  setAiMode(next);
+                  try { localStorage.setItem('andros.ai.mode.v1', next); } catch { /* keep this session's choice */ }
+                }} className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/50">
+                  <option value="auto">Automatica · gratis prima</option>
+                  <option value="ollama">Solo Ollama locale</option>
+                  <option value="gemini">Gemini API (richiede chiave)</option>
+                </select>
+                <span className="mt-1.5 block text-[11px] leading-4 text-slate-500">In automatica, il codice resta preferibilmente su Ollama; Gemini può gestire scrittura e ragionamento se la chiave è configurata. Se non configuri Gemini, l’app resta locale.</span>
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-slate-300">Chiave Gemini API (facoltativa)</span>
+                <input value={geminiKeyDraft} onChange={(event) => setGeminiKeyDraft(event.target.value)} type="password" placeholder="Incolla la chiave di Google AI Studio" autoCapitalize="none" autoCorrect="off" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/50" />
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-[11px] text-cyan-300 underline underline-offset-2">Ottieni una chiave gratuita</a>
+                  <button type="button" onClick={() => {
+                    try { setGeminiApiKey(geminiKeyDraft); setSettingsError(''); setNotice(geminiKeyDraft.trim() ? 'Chiave Gemini conservata solo nella sessione corrente.' : 'Gemini disattivato; uso Ollama locale.'); }
+                    catch (error) { setSettingsError(error instanceof Error ? error.message : 'Impossibile salvare la chiave.'); }
+                  }} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-200 hover:bg-white/10">Applica chiave</button>
+                </div>
+                <span className="mt-1.5 block text-[10px] leading-4 text-slate-500">La chiave resta in sessionStorage e non viene salvata nei file del progetto. La modalità gratuita Gemini ha limiti e condizioni del provider; evita di inviare dati sensibili.</span>
+              </label>
+              <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3">
+                <p className="text-xs font-semibold text-cyan-100">Altri assistenti</p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-400">ChatGPT e Copilot non espongono un’API consumer gratuita che consenta ad Andros di usare automaticamente le tue chat private. Puoi aprire i loro servizi o importare gli archivi esportati.</p>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <button type="button" onClick={() => void Browser.open({ url: 'https://chatgpt.com/' })} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-xs text-slate-200 hover:bg-white/10">ChatGPT</button>
+                  <button type="button" onClick={() => void Browser.open({ url: 'https://copilot.microsoft.com/' })} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-xs text-slate-200 hover:bg-white/10">Copilot</button>
+                  <button type="button" onClick={() => void Browser.open({ url: 'https://gemini.google.com/' })} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-xs text-slate-200 hover:bg-white/10">Gemini web</button>
+                </div>
+              </div>
+              <button type="button" onClick={openGoogleSync} className="flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-3 text-sm font-medium text-cyan-100 hover:bg-cyan-400/[0.12]">
+                <Cloud size={16} /> Account Google e sincronizzazione
+              </button>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-300">Indirizzo Ollama</span>
                 <input value={endpointDraft} onChange={(event) => setEndpointDraft(event.target.value)} placeholder="http://127.0.0.1:11434" inputMode="url" autoCapitalize="none" autoCorrect="off" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400/50" />

@@ -3,7 +3,7 @@ import { Archive, Search, Upload, Download, Trash2, X, MessageSquareText, FileTe
 import {
   exportArchivedConversations,
   loadArchivedConversations,
-  parseArchiveFile,
+  parseArchiveUpload,
   saveArchivedConversations,
   searchArchivedConversations,
   type ArchivedConversation,
@@ -64,10 +64,11 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
     try {
       let next = [...conversations];
       for (const file of Array.from(files)) {
-        if (file.size > 5 * 1024 * 1024) {
-          throw new Error(`Il file “${file.name}” supera il limite di 5 MB.`);
+        const maxBytes = file.name.toLowerCase().endsWith('.zip') ? 100 * 1024 * 1024 : 5 * 1024 * 1024;
+        if (file.size > maxBytes) {
+          throw new Error(`Il file “${file.name}” supera il limite consentito.`);
         }
-        const parsed = parseArchiveFile(file.name, await file.text());
+        const parsed = await parseArchiveUpload(file);
         next = [...next, ...parsed];
         imported += parsed.length;
       }
@@ -130,8 +131,8 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
             <button type="button" onClick={saveCurrentConversation} className="flex items-center justify-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-3 text-sm font-medium text-cyan-100 hover:bg-cyan-400/[0.12]"><MessageSquareText size={16} /> Salva chat corrente</button>
             <button type="button" onClick={exportAll} disabled={!conversations.length} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-medium text-slate-200 hover:bg-white/10 disabled:opacity-40"><Download size={16} /> Esporta archivio</button>
           </div>
-          <input ref={fileRef} type="file" accept=".json,.txt,.md,.html,.htm,.csv,application/json,text/plain,text/html" multiple className="hidden" onChange={(event) => void importFiles(event.target.files)} />
-          <p className="text-[11px] leading-4 text-slate-500">Formati: JSON, TXT, MD, HTML e CSV (max 5 MB per file). Per ChatGPT, estrai conversations.json dal file ZIP esportato. Per altri servizi, importa un file testuale o JSON compatibile.</p>
+          <input ref={fileRef} type="file" accept=".zip,.json,.txt,.md,.html,.htm,.csv,application/zip,application/json,text/plain,text/html" multiple className="hidden" onChange={(event) => void importFiles(event.target.files)} />
+          <p className="text-[11px] leading-4 text-slate-500">Formati: ZIP (max 100 MB), JSON, TXT, MD, HTML e CSV (max 5 MB per file). Puoi caricare direttamente lo ZIP di ChatGPT; per Gemini, esporta i dati con Google Takeout. I formati variano in base al servizio.</p>
           <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 focus-within:border-cyan-400/40">
             <Search size={17} className="shrink-0 text-slate-500" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cerca codice, progetto, argomento…" aria-label="Cerca nell’archivio" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500" />

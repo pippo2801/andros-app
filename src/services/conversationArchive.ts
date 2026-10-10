@@ -1,3 +1,4 @@
+import { strFromU8, unzipSync } from 'fflate';
 export interface ArchivedMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -98,6 +99,60 @@ function parseGenericJson(value: unknown, sourceName: string): ArchivedConversat
   return output;
 }
 
+function parseCsvRows(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === '"') {
+      if (quoted && text[i + 1] === '"') { cell += '"'; i++; }
+      else quoted = !quoted;
+    } else if (char === ',' && !quoted) {
+      row.push(cell); cell = '';
+    } else if ((char === '\n' || char === '\r') && !quoted) {
+      if (char === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); cell = '';
+      if (row.some((value) => value.trim())) rows.push(row);
+      row = [];
+    } else cell += char;
+  }
+  row.push(cell);
+  if (row.some((value) => value.trim())) rows.push(row);
+  return rows;
+}
+
+function parseCsv(text: string, name: string): ArchivedConversation[] {
+  const rows = parseCsvRows(text);
+  if (rows.length < 2) return parsePlainText(text, name);
+  const headers = rows[0].map((value) => value.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+  const findColumn = (patterns: RegExp[]) => headers.findIndex((header) => patterns.some((pattern) => pattern.test(header)));
+  const promptIndex = findColumn([/^(prompt|question|userprompt|userquery|query|input|usertext)$/]);
+  const responseIndex = findColumn([/^(response|answer|assistantresponse|output|reply|copilotresponse)$/]);
+  const titleIndex = findColumn([/^(title|conversationtitle|chatname|topic)$/]);
+  const dateIndex = findColumn([/^(date|timestamp|createdat|time)$/]);
+  const output: ArchivedConversation[] = [];
+  rows.slice(1).forEach((values, index) => {
+    const prompt = promptIndex >= 0 ? (values[promptIndex] || '').trim() : '';
+    const response = responseIndex >= 0 ? (values[responseIndex] || '').trim() : '';
+    const otherText = values.filter((value, column) => column !== dateIndex && column !== titleIndex).map((value) => value.trim()).filter(Boolean);
+    const messages: ArchivedMessage[] = [];
+    if (prompt) messages.push({ role: 'user', content: prompt.slice(0, MAX_MESSAGE_LENGTH) });
+    if (response) messages.push({ role: 'assistant', content: response.slice(0, MAX_MESSAGE_LENGTH) });
+    if (!messages.length && otherText.length) messages.push({ role: 'user', content: otherText.join('\n').slice(0, MAX_MESSAGE_LENGTH) });
+    if (!messages.length) return;
+    output.push({
+      id: `csv-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+      title: (titleIndex >= 0 ? values[titleIndex] : '')?.trim() || `Attività importata ${index + 1}`,
+      source: /copilot|microsoft/i.test(name) ? 'Microsoft Copilot CSV' : 'CSV importato',
+      importedAt: dateIndex >= 0 && values[dateIndex] ? (Date.parse(values[dateIndex]) || Date.now()) : Date.now(),
+      messages,
+    });
+  });
+  return output.length ? output : parsePlainText(text, name);
+}
+
 function parsePlainText(text: string, name: string): ArchivedConversation[] {
   const cleaned = text.trim();
   if (!cleaned) return [];
@@ -129,14 +184,47 @@ export function parseArchiveFile(name: string, content: string): ArchivedConvers
       throw new Error('Il file JSON non è valido o non può essere letto.');
     }
   }
-  if (lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.html') || lower.endsWith('.htm') || lower.endsWith('.csv')) {
+  if (lower.endsWith('.csv')) return parseCsv(content, name);
+  if (lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.html') || lower.endsWith('.htm')) {
     const withoutHtml = lower.endsWith('.html') || lower.endsWith('.htm')
-      ? content.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ')
+      ? content.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, '\n').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n')
       : content;
     return parsePlainText(withoutHtml, name);
   }
-  throw new Error('Formato non supportato. Usa JSON, TXT, MD, HTML o CSV. Per gli archivi ZIP, estrai prima conversations.json.');
+  throw new Error('Formato non supportato. Usa ZIP, JSON, TXT, MD, HTML o CSV.');
 }
+
+export async function parseArchiveUpload(file: File): Promise<ArchivedConversation[]> {
+  const name = file.name.toLowerCase();
+  if (!name.endsWith('.zip')) return parseArchiveFile(file.name, await file.text());
+  if (file.size > 100 * 1024 * 1024) throw new Error('L’archivio ZIP supera il limite di 100 MB.');
+  let files: Record<string, Uint8Array>;
+  try {
+    files = unzipSync(new Uint8Array(await file.arrayBuffer()));
+  } catch {
+    throw new Error('Archivio ZIP non valido o danneggiato.');
+  }
+  const entries = Object.entries(files).filter(([path]) => !path.startsWith('__MACOSX/') && !path.endsWith('/'));
+  const chatJson = entries.filter(([path]) => /(^|\/)conversations(?:_\d+)?\.json$/i.test(path));
+  const conversations: ArchivedConversation[] = [];
+  for (const [path, bytes] of chatJson) {
+    try {
+      conversations.push(...parseArchiveFile(path.split('/').pop() || path, strFromU8(bytes)));
+    } catch {
+      // Continue reading other recognized files in the same archive.
+    }
+  }
+  if (conversations.length) return conversations;
+  const likelyHtml = entries.filter(([path]) => /gemini|myactivity|copilot|chat/i.test(path) && /\.html?$/i.test(path));
+  for (const [path, bytes] of likelyHtml.slice(0, 50)) {
+    const imported = parseArchiveFile(path.split('/').pop() || path, strFromU8(bytes));
+    if (imported.length) conversations.push(...imported);
+  }
+  if (conversations.length) return conversations;
+  throw new Error('Non ho trovato conversazioni riconoscibili nello ZIP. Per ChatGPT cerca conversations.json; per Gemini esporta i dati da Google Takeout e seleziona Gemini.');
+}
+
+
 
 export function loadArchivedConversations(): ArchivedConversation[] {
   try {
@@ -169,8 +257,8 @@ export function searchArchivedConversations(conversations: ArchivedConversation[
   const matches: Array<{ conversation: ArchivedConversation; message: ArchivedMessage }> = [];
   for (const conversation of conversations) {
     for (const message of conversation.messages) {
-      const haystack = `${conversation.title} ${message.content} ${conversation.source}`.toLocaleLowerCase();
-      if (terms.every((term) => haystack.includes(term))) matches.push({ conversation, message });
+      const haystack = conversation.title + ' ' + message.content + ' ' + conversation.source;
+      if (terms.every((term) => haystack.toLocaleLowerCase().includes(term))) matches.push({ conversation, message });
     }
   }
   return matches.slice(0, 100);
