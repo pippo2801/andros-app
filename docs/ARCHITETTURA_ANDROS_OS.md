@@ -11,7 +11,7 @@
 - Plugin: `@capacitor-community/generic-oauth2`, flusso authorization code con PKCE.
 - Scopes: `openid email profile https://www.googleapis.com/auth/drive.appdata`.
 - Il token d'accesso è mantenuto in memoria, senza refresh token persistente.
-- `googleDriveSync.ts` unisce archivi e regole per ID in un file JSON nella cartella privata `appDataFolder`.
+- `googleDriveSync.ts` unisce archivi e regole per ID in un file JSON visibile creato da Andros nella cartella Drive dell'utente.
 - La sincronizzazione richiede un Client ID OAuth configurato in Google Cloud e un test reale su Android; le credenziali del progetto non possono essere inventate o create da questo repository.
 - Il backup contiene dati personali: l'utente deve autorizzare il progetto e decidere consapevolmente se sincronizzarli.
 
