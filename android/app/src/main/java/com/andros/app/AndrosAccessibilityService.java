@@ -46,16 +46,30 @@ public final class AndrosAccessibilityService extends AccessibilityService {
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event == null || event.getPackageName() == null) return;
         String packageName = event.getPackageName().toString().toLowerCase(Locale.ROOT);
-        boolean protectedApp = isProtectedPackage(packageName);
-        currentPackage = packageName;
-        currentPackageProtected = protectedApp;
+        // Do not let Andros' own floating overlay overwrite the identity of the
+        // external app underneath it; otherwise a protected-app guard could be
+        // cleared by the overlay itself.
+        if (OWN_PACKAGE.equals(packageName)) return;
 
-        // Never inspect the window tree of a protected app or Andros itself.
-        if (protectedApp) {
+        int eventType = event.getEventType();
+        boolean windowChanged = eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+            || eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED;
+        if (windowChanged) {
+            currentPackage = packageName;
+            currentPackageProtected = isProtectedPackage(packageName);
+            if (currentPackageProtected) {
+                clearSnapshot();
+                return;
+            }
+        } else if (!packageName.equals(currentPackage)) {
+            return;
+        }
+
+        // Never inspect the window tree of a protected app.
+        if (currentPackageProtected) {
             clearSnapshot();
             return;
         }
-        if (OWN_PACKAGE.equals(packageName)) return;
 
         AccessibilityNodeInfo root = null;
         try {
