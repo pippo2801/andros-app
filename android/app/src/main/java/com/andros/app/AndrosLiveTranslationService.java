@@ -272,7 +272,7 @@ public final class AndrosLiveTranslationService extends Service {
 
     private void identifyAndTranslate(String original, Bitmap bitmap) {
         languageIdentifier.identifyLanguage(original)
-            .addOnSuccessListener(worker, detected -> {
+            .addOnSuccessListener(command -> worker.post(command), detected -> {
                 String source = detected == null || "und".equals(detected)
                     ? "en" : TranslateLanguage.fromLanguageTag(detected);
                 String target = TranslateLanguage.fromLanguageTag(targetLanguage);
@@ -291,7 +291,7 @@ public final class AndrosLiveTranslationService extends Service {
                         if (!task.isSuccessful()) throw task.getException();
                         return translator.translate(original);
                     })
-                    .addOnSuccessListener(worker, translated -> {
+                    .addOnSuccessListener(command -> worker.post(command), translated -> {
                         lastTranslation = translated == null ? "" : translated;
                         lastProcessedAt = System.currentTimeMillis();
                         updateOverlay(lastTranslation);
@@ -319,7 +319,6 @@ public final class AndrosLiveTranslationService extends Service {
             text.setPadding(24, 18, 24, 18);
             text.setBackgroundColor(0xE6121B2C);
             text.setMaxLines(8);
-            text.setTextIsSelectable(true);
             ScrollView scroll = new ScrollView(this);
             scroll.addView(text);
             int type = Build.VERSION.SDK_INT >= 26
@@ -330,6 +329,7 @@ public final class AndrosLiveTranslationService extends Service {
                 WindowManager.LayoutParams.WRAP_CONTENT, type,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                     | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                    | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                     | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
             params.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
