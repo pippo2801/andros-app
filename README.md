@@ -72,3 +72,16 @@ Questa è soltanto la base nativa di stato e consenso. Il controllo effettivo de
 richiede in seguito autenticazione attendibile, denylist configurabile, verifiche
 per azione, cancellazione immediata e test su dispositivo. Non va considerato ancora
 un assistente autonomo pronto all'uso.
+
+
+## Voice input/output (branch di sviluppo)
+
+Il branch aggiunge un pulsante di dettatura Android con permesso microfono richiesto
+dal sistema e la lettura ad alta voce delle risposte tramite Text-to-Speech. La
+trascrizione viene inserita nel campo di testo e deve essere controllata dall'utente
+prima dell'invio.
+
+**La trascrizione non identifica la persona che parla.** Questa versione non implementa
+ancora wake word sempre attiva, riconoscimento biometrico della voce o verifica
+anti-registrazione. Non usare la dettatura come unica autorizzazione per azioni
+sensibili. L'automazione resta disabilitata nel bridge Accessibilità iniziale.
