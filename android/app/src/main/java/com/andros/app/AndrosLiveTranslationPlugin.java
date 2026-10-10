@@ -56,6 +56,10 @@ public final class AndrosLiveTranslationPlugin extends Plugin {
 
     @PluginMethod
     public void start(PluginCall call) {
+        if (!AndrosAccessibilityService.isRunning()) {
+            call.reject("Per la protezione delle app bancarie, attiva prima il servizio Accessibilità Andros nelle impostazioni Android.");
+            return;
+        }
         if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(getContext())) {
             call.reject("Prima consenti a Andros di mostrare la sovrapposizione sopra le altre app.");
             return;
@@ -64,9 +68,8 @@ public final class AndrosLiveTranslationPlugin extends Plugin {
         MediaProjectionManager manager = (MediaProjectionManager)
             getContext().getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         try {
-            Intent intent = manager.createScreenCaptureIntent();
-            startActivityForResult(call, intent, "screenCaptureResult");
             call.setKeepAlive(true);
+            startActivityForResult(call, manager.createScreenCaptureIntent(), "screenCaptureResult");
         } catch (Exception exception) {
             call.reject("Impossibile richiedere il consenso Android per acquisire lo schermo.");
         }
