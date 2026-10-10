@@ -224,3 +224,46 @@ export async function parseArchiveUpload(file: File): Promise<ArchivedConversati
   throw new Error('Non ho trovato conversazioni riconoscibili nello ZIP. Per ChatGPT cerca conversations.json; per Gemini esporta i dati da Google Takeout e seleziona Gemini.');
 }
 
+
+
+export function loadArchivedConversations(): ArchivedConversation[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is ArchivedConversation =>
+      item && typeof item.id === 'string' && typeof item.title === 'string' && Array.isArray(item.messages));
+  } catch {
+    return [];
+  }
+}
+
+export function saveArchivedConversations(conversations: ArchivedConversation[]): void {
+  const bounded = conversations.slice(-MAX_CONVERSATIONS);
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(bounded));
+  } catch {
+    throw new Error('Memoria locale piena. Esporta o elimina alcune conversazioni e riprova.');
+  }
+}
+
+export function searchArchivedConversations(conversations: ArchivedConversation[], query: string): Array<{
+  conversation: ArchivedConversation;
+  message: ArchivedMessage;
+}> {
+  const terms = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+  const matches: Array<{ conversation: ArchivedConversation; message: ArchivedMessage }> = [];
+  for (const conversation of conversations) {
+    for (const message of conversation.messages) {
+      const haystack = conversation.title + ' ' + message.content + ' ' + conversation.source;
+      if (terms.every((term) => haystack.toLocaleLowerCase().includes(term))) matches.push({ conversation, message });
+    }
+  }
+  return matches.slice(0, 100);
+}
+
+export function exportArchivedConversations(conversations: ArchivedConversation[]): string {
+  return JSON.stringify({ app: 'ANDROS OS', version: 1, exportedAt: new Date().toISOString(), conversations }, null, 2);
+}
