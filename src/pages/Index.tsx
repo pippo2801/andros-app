@@ -2,11 +2,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle, BookOpen, Bot, CheckCircle2, Cpu, Menu, Plus, Send, Settings2,
   Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
+  ShieldCheck, ExternalLink, RefreshCw, Mic,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
 import { ArchivePanel } from '../components/ArchivePanel';
 import { chooseModelForTask } from '../services/aiRouter';
+import { recognizeOnce, speakText } from '../services/voice';
+import {
+  getAccessibilityStatus,
+  openAccessibilitySettings,
+  type AndrosAccessibilityStatus,
+} from '../services/accessibility';
 import {
   checkOllamaConnection,
   getOllamaConfig,
@@ -88,6 +95,9 @@ export default function Index() {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [settingsError, setSettingsError] = useState('');
   const [notice, setNotice] = useState('');
+  const [accessibilityStatus, setAccessibilityStatus] = useState<AndrosAccessibilityStatus | null>(null);
+  const [accessibilityLoading, setAccessibilityLoading] = useState(false);
+  const [voiceLoading, setVoiceLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -107,12 +117,35 @@ export default function Index() {
     }
   }, [memoryRules]);
 
+  const refreshAccessibilityStatus = async () => {
+    setAccessibilityLoading(true);
+    try {
+      const status = await getAccessibilityStatus();
+      setAccessibilityStatus(status);
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : 'Stato Accessibilità non disponibile.');
+    } finally {
+      setAccessibilityLoading(false);
+    }
+  };
+
+  const handleOpenAccessibilitySettings = async () => {
+    try {
+      await openAccessibilitySettings();
+      setNotice('Attiva Andros solo se desideri abilitare la funzione Accessibilità. Android richiede la tua conferma.');
+      window.setTimeout(() => { void refreshAccessibilityStatus(); }, 1200);
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : 'Impossibile aprire le impostazioni Accessibilità.');
+    }
+  };
+
   const openSettings = () => {
     setEndpointDraft(config.endpoint);
     setModelDraft(config.model);
     setSettingsError('');
     setSettingsOpen(true);
     setIsSidebarOpen(false);
+    void refreshAccessibilityStatus();
   };
 
   const openArchive = () => {
@@ -178,6 +211,35 @@ export default function Index() {
       setNotice('Impostazioni salvate su questo dispositivo.');
     } catch (error) {
       setSettingsError(error instanceof Error ? error.message : 'Impossibile salvare le impostazioni.');
+    }
+  };
+
+  const handleVoiceInput = async () => {
+    if (voiceLoading || loading) return;
+    setVoiceLoading(true);
+    try {
+      const result = await recognizeOnce('it-IT');
+      if (result.cancelled) {
+        setNotice('Dettatura annullata.');
+      } else if (result.text.trim()) {
+        setInput(result.text.trim());
+        setNotice('Testo trascritto. Controllalo prima di premere Invia: la trascrizione non verifica l’identità di chi parla.');
+      } else {
+        setNotice('Non ho riconosciuto parole. Riprova parlando più vicino al microfono.');
+      }
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : 'Riconoscimento vocale non disponibile.');
+      setNotice('Controlla il permesso microfono e la disponibilità del riconoscimento vocale Android.');
+    } finally {
+      setVoiceLoading(false);
+    }
+  };
+
+  const handleSpeak = async (text: string) => {
+    try {
+      await speakText(text);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Sintesi vocale non disponibile.');
     }
   };
 
@@ -328,7 +390,7 @@ export default function Index() {
 
           <div className="mx-auto max-w-3xl">
             {messages.map((message, index) => (
-              <ChatMessage key={index} content={message.content} role={message.role} />
+              <ChatMessage key={index} content={message.content} role={message.role} onSpeak={message.role === 'assistant' ? () => { void handleSpeak(message.content); } : undefined} />
             ))}
             {loading && (
               <div className="mb-4 flex justify-start">
@@ -360,6 +422,16 @@ export default function Index() {
               className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
             />
             <button
+              type="button"
+              onClick={() => { void handleVoiceInput(); }}
+              disabled={loading || voiceLoading}
+              aria-label="Dettatura vocale"
+              title="Dettatura vocale"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-cyan-200 transition hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {voiceLoading ? <LoaderCircle size={18} className="animate-spin" /> : <Mic size={18} />}
+            </button>
+            <button
               type="submit"
               disabled={loading || !input.trim()}
               aria-label="Invia messaggio"
@@ -368,7 +440,7 @@ export default function Index() {
               <Send size={18} />
             </button>
           </form>
-          <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">ANDROS OS · Router automatico locale · {activeModel} · Le risposte possono contenere errori</p>
+          <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">ANDROS OS · Router automatico locale · {activeModel} · La dettatura trascrive la voce ma non autentica chi parla</p>
         </div>
       </section>
 
@@ -463,6 +535,51 @@ export default function Index() {
                 <button type="button" onClick={handleSaveSettings} className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white transition hover:brightness-110">Salva impostazioni</button>
               </div>
               <p className="text-[10px] leading-4 text-slate-500">La configurazione viene salvata sul dispositivo. Ollama deve essere avviato e raggiungibile; l’app non scarica automaticamente i modelli.</p>
+
+              <div className="rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.045] p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-white">Accessibilità Android</h3>
+                    <p className="mt-1 text-xs leading-5 text-slate-400">Base nativa in fase iniziale. Rileva soltanto lo stato del servizio e il package in primo piano; non legge i contenuti e non esegue tocchi. L’attivazione è sempre manuale nelle impostazioni Android. La dettatura vocale è separata dall’autenticazione: per ora non dimostra che chi parla sia tu.</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-xl border border-white/[0.07] bg-slate-950/70 p-3 text-xs">
+                  {!accessibilityStatus ? (
+                    <span className="text-slate-400">Stato non ancora verificato.</span>
+                  ) : !accessibilityStatus.supported ? (
+                    <span className="text-slate-400">Disponibile solo nell’app Android installata.</span>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-400">Servizio abilitato</span>
+                        <span className={accessibilityStatus.enabled ? 'text-emerald-300' : 'text-amber-300'}>{accessibilityStatus.enabled ? 'Sì' : 'No'}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-400">Servizio attivo</span>
+                        <span className={accessibilityStatus.running ? 'text-emerald-300' : 'text-amber-300'}>{accessibilityStatus.running ? 'Sì' : 'No'}</span>
+                      </div>
+                      {accessibilityStatus.currentPackageProtected && (
+                        <p className="mt-2 rounded-lg border border-rose-400/20 bg-rose-400/[0.07] p-2 text-rose-200">App protetta rilevata: Andros non deve automatizzarla.</p>
+                      )}
+                      <p className="pt-1 text-[10px] leading-4 text-slate-500">{accessibilityStatus.message}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => { void refreshAccessibilityStatus(); }} disabled={accessibilityLoading} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs font-medium text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
+                    <RefreshCw size={14} className={accessibilityLoading ? 'animate-spin' : ''} /> Aggiorna stato
+                  </button>
+                  <button type="button" onClick={() => { void handleOpenAccessibilitySettings(); }} disabled={!accessibilityStatus?.supported} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-2.5 text-xs font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">
+                    <ExternalLink size={14} /> Impostazioni Android
+                  </button>
+                </div>
+                <p className="mt-2 text-[10px] leading-4 text-slate-500">Il controllo automatico delle app non è ancora attivo in questa versione. Le app bancarie e di pagamento restano escluse dalla progettazione del motore operativo.</p>
+              </div>
             </div>
           </section>
         </div>

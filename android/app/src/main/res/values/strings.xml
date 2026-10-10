@@ -4,4 +4,5 @@
     <string name="title_activity_main">ANDROS OS</string>
     <string name="package_name">com.andros.app</string>
     <string name="custom_url_scheme">com.andros.app</string>
+    <string name="andros_accessibility_description">Andros usa l’Accessibilità solo dopo la tua attivazione per preparare il controllo assistito del dispositivo. Questa versione registra soltanto il package in primo piano e blocca i package bancari riconosciuti; non legge il contenuto delle schermate e non esegue tocchi.</string>
 </resources>
