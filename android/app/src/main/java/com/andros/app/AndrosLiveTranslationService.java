@@ -75,6 +75,8 @@ public final class AndrosLiveTranslationService extends Service {
     private final List<TextRecognizer> fallbackRecognizers = new ArrayList<>();
     private LanguageIdentifier languageIdentifier;
     private Translator translator;
+    private String translatorSourceLanguage = "";
+    private String translatorTargetLanguage = "";
     private String targetLanguage = "it";
     private final AtomicBoolean processing = new AtomicBoolean(false);
     private volatile String lastOriginal = "";
@@ -254,6 +256,9 @@ public final class AndrosLiveTranslationService extends Service {
 
     private void tryFallbackRecognizer(InputImage input, Bitmap bitmap, int index) {
         if (index >= fallbackRecognizers.size()) {
+            lastOriginal = "";
+            lastTranslation = "";
+            updateOverlay("Andros Traduzione live\\nNessun testo leggibile in questa schermata.");
             bitmap.recycle();
             processing.set(false);
             return;
@@ -271,6 +276,12 @@ public final class AndrosLiveTranslationService extends Service {
     }
 
     private void identifyAndTranslate(String original, Bitmap bitmap) {
+        if (original.equals(lastOriginal)) {
+            bitmap.recycle();
+            processing.set(false);
+            return;
+        }
+        lastOriginal = original;
         languageIdentifier.identifyLanguage(original)
             .addOnSuccessListener(command -> worker.post(command), detected -> {
                 String source = detected == null || "und".equals(detected)
@@ -282,10 +293,15 @@ public final class AndrosLiveTranslationService extends Service {
                     processing.set(false);
                     return;
                 }
-                TranslatorOptions options = new TranslatorOptions.Builder()
-                    .setSourceLanguage(source).setTargetLanguage(target).build();
-                if (translator != null) translator.close();
-                translator = Translation.getClient(options);
+                if (translator == null || !source.equals(translatorSourceLanguage)
+                    || !target.equals(translatorTargetLanguage)) {
+                    if (translator != null) translator.close();
+                    TranslatorOptions options = new TranslatorOptions.Builder()
+                        .setSourceLanguage(source).setTargetLanguage(target).build();
+                    translator = Translation.getClient(options);
+                    translatorSourceLanguage = source;
+                    translatorTargetLanguage = target;
+                }
                 translator.downloadModelIfNeeded()
                     .continueWithTask(task -> {
                         if (!task.isSuccessful()) throw task.getException();
@@ -398,6 +414,8 @@ public final class AndrosLiveTranslationService extends Service {
         fallbackRecognizers.clear();
         if (languageIdentifier != null) { languageIdentifier.close(); languageIdentifier = null; }
         if (translator != null) { translator.close(); translator = null; }
+        translatorSourceLanguage = "";
+        translatorTargetLanguage = "";
         if (workerThread != null) {
             workerThread.quitSafely();
             workerThread = null;
