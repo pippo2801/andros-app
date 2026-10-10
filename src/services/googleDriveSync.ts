@@ -114,8 +114,8 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   const merged: AndrosSyncSnapshot = {
     schema: 1,
     updatedAt: Date.now(),
-    archive: mergeById(local.archive, remote?.archive ?? []),
-    rules: mergeById(local.rules, remote?.rules ?? []),
+    archive: mergeById(local.archive, Array.isArray(remote?.archive) ? remote.archive : []),
+    rules: mergeById(local.rules, Array.isArray(remote?.rules) ? remote.rules : []),
   };
   const body = JSON.stringify(merged);
   if (existing?.id) {
