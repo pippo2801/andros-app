@@ -28,10 +28,19 @@ Run these checks on the target Android phone after installing the debug APK.
 - Return to Andros and refresh the status.
 - Confirm enabled/running status is reported accurately.
 
-## 5. Protected-app guard
-- Open an ordinary app and check that the service reports its package as not protected.
-- Open an installed banking/payment app and confirm that the status reports it as protected where its package matches the denylist/heuristics.
-- This version does not inspect screen contents or execute actions. The test must not involve credentials, OTPs, payments, or transactions.
+## 5. Multilingual and live screen translation
+- Open the translator icon in the Andros header.
+- Translate harmless sample phrases from at least two languages with Ollama reachable.
+- Confirm copy and text-to-speech controls work.
+- Enable the Accessibility service manually from Android settings.
+- Grant “Display over other apps” only if you want a floating translation panel.
+- Tap **Avvia traduzione live** and approve Android's screen-capture prompt.
+- Open a harmless app with visible text. Confirm the translated overlay appears and updates when the text changes.
+- Confirm the persistent notification contains an **Arresta** action and that stopping it removes the overlay.
+- Test a short Latin-script phrase and, if available, a CJK/Devanagari phrase. First-use language-model downloads may require network access.
+- Open a banking/payment app and confirm the live translation pauses if the package is detected as protected. Do not enter credentials, OTPs, payments or transactions.
+- Cancel the screen-capture prompt and verify Andros reports cancellation without crashing.
+- Verify that image-only text, small text and some protected app content may not be recognized; the feature is experimental.
 
 ## 6. Regression and recovery
 - Force-close and reopen Andros; verify chat and settings still work.
@@ -40,4 +49,4 @@ Run these checks on the target Android phone after installing the debug APK.
 - Record Android version, device model, result, and any crash/logcat details.
 
 ## Acceptance boundary
-Passing this checklist verifies only push-to-talk transcription, TTS, and the initial accessibility status bridge. It does not verify speaker identity, wake-word listening, autonomous app control, Termux execution, or exclusion of every possible banking app. Those require separate implementation and tests.
+Passing this checklist verifies only the functions actually tested on this device. It does not verify speaker identity, wake-word listening, autonomous app control, Termux execution, OCR accuracy for every script, or exclusion of every possible banking app. Those require separate implementation and tests.
