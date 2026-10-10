@@ -39,6 +39,12 @@ import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions;
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions;
+import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions;
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions;
+import java.util.ArrayList;
+import java.util.List;
 
 import java.nio.ByteBuffer;
 import java.util.Locale;
@@ -66,6 +72,7 @@ public final class AndrosLiveTranslationService extends Service {
     private WindowManager windowManager;
     private ViewHolder overlay;
     private TextRecognizer recognizer;
+    private final List<TextRecognizer> fallbackRecognizers = new ArrayList<>();
     private LanguageIdentifier languageIdentifier;
     private Translator translator;
     private String targetLanguage = "it";
@@ -92,6 +99,10 @@ public final class AndrosLiveTranslationService extends Service {
         createNotificationChannel();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        fallbackRecognizers.add(TextRecognition.getClient(new ChineseTextRecognizerOptions.Builder().build()));
+        fallbackRecognizers.add(TextRecognition.getClient(new JapaneseTextRecognizerOptions.Builder().build()));
+        fallbackRecognizers.add(TextRecognition.getClient(new KoreanTextRecognizerOptions.Builder().build()));
+        fallbackRecognizers.add(TextRecognition.getClient(new DevanagariTextRecognizerOptions.Builder().build()));
         languageIdentifier = LanguageIdentification.getClient();
         workerThread = new HandlerThread("AndrosScreenOCR");
         workerThread.start();
@@ -218,28 +229,45 @@ public final class AndrosLiveTranslationService extends Service {
         InputImage input = InputImage.fromBitmap(bitmap, 0);
         recognizer.process(input)
             .addOnSuccessListener(worker::post, result -> {
-                StringBuilder all = new StringBuilder();
-                for (Text.TextBlock block : result.getTextBlocks()) {
-                    String value = block.getText().trim();
-                    if (!value.isEmpty() && !value.equals(lastTranslation)) {
-                        if (all.length() > 0) all.append('\n');
-                        all.append(value);
-                    }
-                    if (all.length() > 6000) break;
+                String original = extractText(result);
+                if (original.isEmpty()) {
+                    tryFallbackRecognizer(input, bitmap, 0);
+                } else {
+                    identifyAndTranslate(original, bitmap);
                 }
-                String original = all.toString().trim();
-                if (original.isEmpty() || original.equals(lastOriginal)) {
-                    bitmap.recycle();
-                    processing.set(false);
-                    return;
-                }
-                lastOriginal = original;
-                identifyAndTranslate(original, bitmap);
             })
-            .addOnFailureListener(error -> {
-                bitmap.recycle();
-                processing.set(false);
-            });
+            .addOnFailureListener(error -> tryFallbackRecognizer(input, bitmap, 0));
+    }
+
+    private String extractText(Text result) {
+        StringBuilder all = new StringBuilder();
+        for (Text.TextBlock block : result.getTextBlocks()) {
+            String value = block.getText().trim();
+            if (!value.isEmpty() && !value.equals(lastTranslation)) {
+                if (all.length() > 0) all.append('\\n');
+                all.append(value);
+            }
+            if (all.length() > 6000) break;
+        }
+        return all.toString().trim();
+    }
+
+    private void tryFallbackRecognizer(InputImage input, Bitmap bitmap, int index) {
+        if (index >= fallbackRecognizers.size()) {
+            bitmap.recycle();
+            processing.set(false);
+            return;
+        }
+        fallbackRecognizers.get(index).process(input)
+            .addOnSuccessListener(worker::post, result -> {
+                String original = extractText(result);
+                if (original.isEmpty()) {
+                    tryFallbackRecognizer(input, bitmap, index + 1);
+                } else {
+                    identifyAndTranslate(original, bitmap);
+                }
+            })
+            .addOnFailureListener(error -> tryFallbackRecognizer(input, bitmap, index + 1));
     }
 
     private void identifyAndTranslate(String original, Bitmap bitmap) {
@@ -366,6 +394,8 @@ public final class AndrosLiveTranslationService extends Service {
             overlay = null;
         }
         if (recognizer != null) { recognizer.close(); recognizer = null; }
+        for (TextRecognizer fallback : fallbackRecognizers) fallback.close();
+        fallbackRecognizers.clear();
         if (languageIdentifier != null) { languageIdentifier.close(); languageIdentifier = null; }
         if (translator != null) { translator.close(); translator = null; }
         if (workerThread != null) {
