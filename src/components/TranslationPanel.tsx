@@ -3,6 +3,7 @@ import { Languages, MonitorSmartphone, RefreshCw, Volume2, X, Copy, LoaderCircle
 import { speakText } from '../services/voice';
 import { getLastVisibleScreenText, type ScreenTextSnapshot } from '../services/screenText';
 import { translateText, TRANSLATION_LANGUAGES, type TranslationLanguage } from '../services/translation';
+import { getLiveTranslationStatus, requestLiveTranslationOverlayPermission, startLiveTranslation, stopLiveTranslation, type LiveTranslationStatus } from '../services/liveTranslation';
 
 interface TranslationPanelProps {
   onClose: () => void;
@@ -19,7 +20,56 @@ export function TranslationPanel({ onClose, onNotice }: TranslationPanelProps) {
   const [liveRefresh, setLiveRefresh] = useState(false);
   const [snapshot, setSnapshot] = useState<ScreenTextSnapshot | null>(null);
   const [error, setError] = useState('');
+  const [liveStatus, setLiveStatus] = useState<LiveTranslationStatus | null>(null);
+  const [liveActionBusy, setLiveActionBusy] = useState(false);
   const refreshTimer = useRef<number | null>(null);
+
+  const refreshLiveStatus = async () => {
+    try {
+      setLiveStatus(await getLiveTranslationStatus());
+    } catch (e) {
+      setLiveStatus({ supported: false, running: false, overlayPermission: false, message: e instanceof Error ? e.message : 'Stato della traduzione live non disponibile.' });
+    }
+  };
+
+  useEffect(() => {
+    void refreshLiveStatus();
+    const timer = window.setInterval(() => { void refreshLiveStatus(); }, 3000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const handleStartLiveTranslation = async () => {
+    setLiveActionBusy(true);
+    setError('');
+    try {
+      const status = await getLiveTranslationStatus();
+      if (!status.overlayPermission) {
+        await requestLiveTranslationOverlayPermission();
+        setError('Consenti “Mostra sopra altre app” nelle impostazioni Android, torna qui e premi Avvia traduzione live.');
+        return;
+      }
+      const result = await startLiveTranslation(targetLanguage);
+      onNotice(result.message);
+      await refreshLiveStatus();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Non è stato possibile avviare la traduzione live.');
+    } finally {
+      setLiveActionBusy(false);
+    }
+  };
+
+  const handleStopLiveTranslation = async () => {
+    setLiveActionBusy(true);
+    try {
+      await stopLiveTranslation();
+      await refreshLiveStatus();
+      onNotice('Traduzione live arrestata.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Non è stato possibile arrestare la traduzione live.');
+    } finally {
+      setLiveActionBusy(false);
+    }
+  };
 
   const captureScreenText = async (quiet = false) => {
     setScreenBusy(true);
@@ -121,7 +171,20 @@ export function TranslationPanel({ onClose, onNotice }: TranslationPanelProps) {
               {screenBusy ? <LoaderCircle size={14} className="animate-spin" /> : <RefreshCw size={14} />} Acquisisci testo
             </button>
           </div>
-          <p className="text-[11px] leading-5 text-slate-400">Legge solo testo esposto dall’accessibilità Android dell’ultima app non protetta. Il servizio va attivato manualmente nelle impostazioni Android. Non è ancora OCR e non mostra una sovrapposizione sopra l’app originale.</p>
+          <p className="text-[11px] leading-5 text-slate-400">Puoi acquisire il testo accessibile oppure avviare la traduzione live: Android chiederà il consenso alla cattura dello schermo e, se necessario, il permesso di sovrapposizione. L'OCR e la traduzione avvengono sul dispositivo; il modello della lingua può essere scaricato la prima volta.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {!liveStatus?.running ? (
+              <button type="button" onClick={() => void handleStartLiveTranslation()} disabled={liveActionBusy || !liveStatus?.supported} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-40">
+                {liveActionBusy ? <LoaderCircle size={14} className="animate-spin" /> : <MonitorSmartphone size={14} />} Avvia traduzione live
+              </button>
+            ) : (
+              <button type="button" onClick={() => void handleStopLiveTranslation()} disabled={liveActionBusy} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2.5 text-xs font-semibold text-rose-200 disabled:opacity-40">
+                {liveActionBusy ? <LoaderCircle size={14} className="animate-spin" /> : <X size={14} />} Arresta traduzione live
+              </button>
+            )}
+            <button type="button" onClick={() => void refreshLiveStatus()} className="rounded-xl border border-white/10 px-3 py-2.5 text-xs text-slate-300"><RefreshCw size={14} /></button>
+          </div>
+          {liveStatus && <p className="mt-2 text-[10px] leading-4 text-slate-500">{liveStatus.message} {!liveStatus.overlayPermission ? ' · Permesso sovrapposizione mancante.' : ''}</p>}
           {snapshot?.sourcePackage && <p className="mt-2 break-all text-[10px] text-slate-500">Origine: {snapshot.sourcePackage}{snapshot.capturedAt ? ` · ${new Date(snapshot.capturedAt).toLocaleTimeString()}` : ''}</p>}
           <label className="mt-3 flex items-center gap-2 text-xs text-slate-300">
             <input type="checkbox" checked={liveRefresh} onChange={(e) => setLiveRefresh(e.target.checked)} />
