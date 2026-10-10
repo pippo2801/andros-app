@@ -2,6 +2,7 @@ package com.andros.app;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
+import android.app.PendingIntent;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
@@ -309,10 +310,16 @@ public final class AndrosLiveTranslationService extends Service {
     }
 
     private Notification buildNotification() {
+        Intent stopIntent = new Intent(this, AndrosLiveTranslationService.class);
+        stopIntent.setAction(ACTION_STOP);
+        int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= 23) pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
+        PendingIntent stopPendingIntent = PendingIntent.getService(this, 8043, stopIntent, pendingFlags);
         return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_search)
             .setContentTitle("Andros: traduzione dello schermo")
-            .setContentText("Acquisizione attiva. Tocca Arresta per terminare.")
+            .setContentText("Acquisizione attiva. Usa Arresta per terminare.")
+            .addAction(android.R.drawable.ic_media_pause, "Arresta", stopPendingIntent)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .build();
