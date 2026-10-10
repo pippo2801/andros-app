@@ -2,12 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle, BookOpen, Bot, CheckCircle2, Cpu, Menu, Plus, Send, Settings2,
   Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
-  ShieldCheck, ExternalLink, RefreshCw,
+  ShieldCheck, ExternalLink, RefreshCw, Mic,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
 import { ArchivePanel } from '../components/ArchivePanel';
 import { chooseModelForTask } from '../services/aiRouter';
+import { recognizeOnce, speakText } from '../services/voice';
 import {
   getAccessibilityStatus,
   openAccessibilitySettings,
@@ -96,6 +97,7 @@ export default function Index() {
   const [notice, setNotice] = useState('');
   const [accessibilityStatus, setAccessibilityStatus] = useState<AndrosAccessibilityStatus | null>(null);
   const [accessibilityLoading, setAccessibilityLoading] = useState(false);
+  const [voiceLoading, setVoiceLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -209,6 +211,35 @@ export default function Index() {
       setNotice('Impostazioni salvate su questo dispositivo.');
     } catch (error) {
       setSettingsError(error instanceof Error ? error.message : 'Impossibile salvare le impostazioni.');
+    }
+  };
+
+  const handleVoiceInput = async () => {
+    if (voiceLoading || loading) return;
+    setVoiceLoading(true);
+    try {
+      const result = await recognizeOnce('it-IT');
+      if (result.cancelled) {
+        setNotice('Dettatura annullata.');
+      } else if (result.text.trim()) {
+        setInput(result.text.trim());
+        setNotice('Testo trascritto. Controllalo prima di premere Invia: la trascrizione non verifica l’identità di chi parla.');
+      } else {
+        setNotice('Non ho riconosciuto parole. Riprova parlando più vicino al microfono.');
+      }
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : 'Riconoscimento vocale non disponibile.');
+      setNotice('Controlla il permesso microfono e la disponibilità del riconoscimento vocale Android.');
+    } finally {
+      setVoiceLoading(false);
+    }
+  };
+
+  const handleSpeak = async (text: string) => {
+    try {
+      await speakText(text);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Sintesi vocale non disponibile.');
     }
   };
 
@@ -359,7 +390,7 @@ export default function Index() {
 
           <div className="mx-auto max-w-3xl">
             {messages.map((message, index) => (
-              <ChatMessage key={index} content={message.content} role={message.role} />
+              <ChatMessage key={index} content={message.content} role={message.role} onSpeak={message.role === 'assistant' ? () => { void handleSpeak(message.content); } : undefined} />
             ))}
             {loading && (
               <div className="mb-4 flex justify-start">
@@ -391,6 +422,16 @@ export default function Index() {
               className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
             />
             <button
+              type="button"
+              onClick={() => { void handleVoiceInput(); }}
+              disabled={loading || voiceLoading}
+              aria-label="Dettatura vocale"
+              title="Dettatura vocale"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-cyan-200 transition hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {voiceLoading ? <LoaderCircle size={18} className="animate-spin" /> : <Mic size={18} />}
+            </button>
+            <button
               type="submit"
               disabled={loading || !input.trim()}
               aria-label="Invia messaggio"
@@ -399,7 +440,7 @@ export default function Index() {
               <Send size={18} />
             </button>
           </form>
-          <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">ANDROS OS · Router automatico locale · {activeModel} · Le risposte possono contenere errori</p>
+          <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">ANDROS OS · Router automatico locale · {activeModel} · La dettatura trascrive la voce ma non autentica chi parla</p>
         </div>
       </section>
 
@@ -502,7 +543,7 @@ export default function Index() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold text-white">Accessibilità Android</h3>
-                    <p className="mt-1 text-xs leading-5 text-slate-400">Base nativa in fase iniziale. Rileva soltanto lo stato del servizio e il package in primo piano; non legge i contenuti e non esegue tocchi. L’attivazione è sempre manuale nelle impostazioni Android.</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-400">Base nativa in fase iniziale. Rileva soltanto lo stato del servizio e il package in primo piano; non legge i contenuti e non esegue tocchi. L’attivazione è sempre manuale nelle impostazioni Android. La dettatura vocale è separata dall’autenticazione: per ora non dimostra che chi parla sia tu.</p>
                   </div>
                 </div>
 
