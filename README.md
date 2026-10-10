@@ -85,3 +85,30 @@ prima dell'invio.
 ancora wake word sempre attiva, riconoscimento biometrico della voce o verifica
 anti-registrazione. Non usare la dettatura come unica autorizzazione per azioni
 sensibili. L'automazione resta disabilitata nel bridge Accessibilità iniziale.
+
+
+## Traduzione multilingue e testo dello schermo (branch di sviluppo)
+
+Il branch `feat/multilingual-screen-translation` aggiunge un pannello di traduzione
+con rilevamento automatico della lingua di origine, selezione della lingua di
+destinazione, copia della traduzione e lettura vocale. Le traduzioni vengono
+richieste al modello Ollama configurato: non è necessario un servizio API a
+pagamento, ma la qualità dipende dal modello installato e dalla sua capacità
+multilingue.
+
+Il pannello può inoltre recuperare il testo esposto dall'albero Accessibilità
+dell'ultima app non protetta. Per questa funzione l'utente deve abilitare
+manualmente il servizio Accessibilità Android. Il testo viene conservato soltanto
+in memoria volatile e non viene scritto su disco dal servizio nativo. Le app
+bancarie/pagamento riconosciute vengono escluse e la schermata viene bloccata se
+un'app protetta è in primo piano.
+
+**Limiti da non confondere con una funzione completa:** questa versione non
+esegue OCR delle immagini, non traduce automaticamente ogni elemento grafico e
+non disegna ancora sottotitoli sovrapposti sopra l'app originale. Il controllo
+periodico aggiorna la copia di testo che il servizio ha reso disponibile; non è
+una sovrapposizione live garantita. Per la traduzione in tempo reale sopra qualsiasi
+app servono ancora cattura schermo/OCR con consenso Android, overlay opt-in,
+gestione foreground service e test specifici su dispositivo. Alcune app non
+espongono il testo all'accessibilità e potrebbero non essere traducibili in questa
+fase.
