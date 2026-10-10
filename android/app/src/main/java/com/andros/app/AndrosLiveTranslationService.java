@@ -84,6 +84,7 @@ public final class AndrosLiveTranslationService extends Service {
     private volatile String lastOriginal = "";
     private volatile String lastTranslation = "";
     private volatile long lastProcessedAt = 0L;
+    private volatile long lastFrameStartedAt = 0L;
     private int screenWidth;
     private int screenHeight;
     private int screenDensity;
@@ -183,7 +184,10 @@ public final class AndrosLiveTranslationService extends Service {
             "AndrosLiveTranslation", screenWidth, screenHeight, screenDensity,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.getSurface(), null, worker);
         imageReader.setOnImageAvailableListener(reader -> {
-            if (stopped || !processing.compareAndSet(false, true)) return;
+            if (stopped) return;
+            long now = System.currentTimeMillis();
+            if (now - lastFrameStartedAt < 1200 || !processing.compareAndSet(false, true)) return;
+            lastFrameStartedAt = now;
             if (AndrosAccessibilityService.isCurrentPackageProtected()) {
                 lastOriginal = "";
                 lastTranslation = "";
