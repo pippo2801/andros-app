@@ -33,7 +33,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role, onSpeak
             type="button"
             onClick={onSpeak}
             aria-label="Leggi risposta ad alta voce"
-            className="absolute top-2 right-10 p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+            className="absolute top-2 right-10 p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors opacity-70 group-hover:opacity-100 focus:opacity-100"
             title="Leggi ad alta voce"
           >
             <Volume2 size={14} />
