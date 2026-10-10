@@ -241,7 +241,7 @@ export default function Index() {
           providerLabel = `Ollama · ${route.model}`;
           setActiveModel(route.model);
         } catch (localError) {
-          if (aiMode === 'auto' && geminiKey && route.category !== 'coding' && route.category !== 'vision') {
+          if (aiMode === 'auto' && geminiKey && route.category !== 'vision') {
             responseText = await sendToGemini(updatedMessages, geminiKey, memoryRules.map((rule) => rule.text));
             providerLabel = 'Gemini API · fallback gratuito';
             setActiveModel('gemini-2.5-flash');
