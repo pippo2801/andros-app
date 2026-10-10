@@ -54,25 +54,35 @@ L'archivio è locale e non accede autonomamente agli account di ChatGPT, Copilot
 Non inserire chiavi API nel codice o committarle nel repository. Se una chiave è stata esposta nella cronologia Git, revocala nel relativo provider. Prima di importare archivi, considera che possono contenere dati personali. L'archivio resta sul dispositivo finché l'utente non lo esporta.
 
 
-## Native Accessibility foundation (branch di sviluppo)
+## Native Accessibility and screen translation (branch di sviluppo)
 
-Il branch `feat/native-accessibility-foundation` aggiunge un primo servizio Android
-abilitabile soltanto dall'utente, con pannello Impostazioni per controllare lo stato
-e aprire le impostazioni Accessibilità del sistema.
+Il servizio Accessibilità deve essere attivato manualmente dall'utente. Legge testo
+accessibile dalle app non protette in memoria volatile e non esegue tocchi né scrive
+nelle altre app. I package bancari/pagamento riconosciuti vengono esclusi; nessuna
+lista euristica può garantire di riconoscere ogni app finanziaria esistente.
 
-- Il servizio registra soltanto il package dell'app in primo piano.
-- La lista protetta contiene package bancari/pagamento noti e controlli conservativi
-  sui nomi dei package.
-- Non legge il testo delle schermate, non effettua tocchi, non scrive testo e non
-  invia dati dello schermo.
-- Il bridge TypeScript dichiara esplicitamente `canAutomate: false`.
-- L'utente deve attivare il servizio manualmente nelle impostazioni Android.
+Il traduttore offre rilevamento automatico della lingua, selezione della destinazione,
+copia e lettura vocale. La traduzione del testo inserito usa il modello Ollama
+configurato. La traduzione live dello schermo usa invece OCR e traduzione on-device
+ML Kit, senza chiavi API a pagamento. I modelli linguistici di ML Kit possono essere
+scaricati alla prima esecuzione; per il download iniziale serve una connessione.
 
-Questa è soltanto la base nativa di stato e consenso. Il controllo effettivo delle app
-richiede in seguito autenticazione attendibile, denylist configurabile, verifiche
-per azione, cancellazione immediata e test su dispositivo. Non va considerato ancora
-un assistente autonomo pronto all'uso.
+La traduzione live richiede:
+- servizio Accessibilità Andros attivo per sospendere l'OCR sulle app protette;
+- permesso Android per mostrare una sovrapposizione;
+- consenso di sistema alla cattura schermo per ogni sessione;
+- notifica persistente con comando **Arresta** durante l'acquisizione.
 
+L'OCR prova prima il modello latino e, se non trova testo, modelli per cinese,
+giapponese, coreano e devanagari. La copertura non è universale: alcuni caratteri,
+testi piccoli, video, animazioni o app con protezioni possono non essere letti.
+L'acquisizione avviene in memoria e non salva screenshot su disco. La traduzione
+live è una funzione sperimentale da verificare sul dispositivo reale; controlla
+sempre i permessi e arresta la sessione dalla notifica quando hai finito.
+
+La voce trascritta non autentica la persona che parla. Wake word, verifica biometrica
+della voce e automazione autonoma delle app non sono ancora implementate. Questa
+build resta di test finché non è stata installata e verificata sul telefono target.
 
 ## Voice input/output (branch di sviluppo)
 
