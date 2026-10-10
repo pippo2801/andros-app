@@ -24,6 +24,7 @@ public final class AndrosAccessibilityService extends AccessibilityService {
     private static final Set<String> PROTECTED_PACKAGES = Collections.unmodifiableSet(
         new HashSet<>(Arrays.asList(
             "it.bancoposta",
+            "posteitaliane.posteitaliane",
             "it.posteitaliane.posteapp",
             "com.latuabancaperandroid",
             "it.unicredit.mbanking",
@@ -97,7 +98,7 @@ public final class AndrosAccessibilityService extends AccessibilityService {
         }
 
         String[] protectedTerms = {
-            "bancoposta", "postepay", "banca", "banking", "bank",
+            "bancoposta", "postepay", "posteitaliane", "latuabancaperandroid", "banca", "banking", "bank",
             "unicredit", "intesa", "fineco", "revolut", "paypal",
             "satispay", "bper", "credem", "bancobpm", "bnl",
             "montepaschi", "mps", "hype", "ingbank", "bbva"
