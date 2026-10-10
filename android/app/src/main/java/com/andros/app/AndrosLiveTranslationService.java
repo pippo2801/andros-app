@@ -249,7 +249,7 @@ public final class AndrosLiveTranslationService extends Service {
         for (Text.TextBlock block : result.getTextBlocks()) {
             String value = block.getText().trim();
             if (!value.isEmpty() && !value.equals(lastTranslation)) {
-                if (all.length() > 0) all.append('\\n');
+                if (all.length() > 0) all.append('\n');
                 all.append(value);
             }
             if (all.length() > 6000) break;
