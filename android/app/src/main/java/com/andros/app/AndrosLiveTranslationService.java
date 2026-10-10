@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.WindowManager;
@@ -69,6 +70,7 @@ public final class AndrosLiveTranslationService extends Service {
     private ImageReader imageReader;
     private HandlerThread workerThread;
     private Handler worker;
+    private Handler mainHandler;
     private WindowManager windowManager;
     private ViewHolder overlay;
     private TextRecognizer recognizer;
@@ -100,6 +102,7 @@ public final class AndrosLiveTranslationService extends Service {
         super.onCreate();
         createNotificationChannel();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        mainHandler = new Handler(Looper.getMainLooper());
         recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         fallbackRecognizers.add(TextRecognition.getClient(new ChineseTextRecognizerOptions.Builder().build()));
         fallbackRecognizers.add(TextRecognition.getClient(new JapaneseTextRecognizerOptions.Builder().build()));
@@ -361,7 +364,8 @@ public final class AndrosLiveTranslationService extends Service {
 
     private void updateOverlay(String translated) {
         if (translated == null || translated.trim().isEmpty()) return;
-        worker.post(() -> showOverlay(translated));
+        Handler ui = mainHandler;
+        if (ui != null) ui.post(() -> showOverlay(translated));
     }
 
     private Notification buildNotification() {
@@ -405,9 +409,14 @@ public final class AndrosLiveTranslationService extends Service {
             try { projection.stop(); } catch (Exception ignored) {}
             projection = null;
         }
-        if (windowManager != null && overlay != null) {
-            try { windowManager.removeView(overlay.scroll); } catch (Exception ignored) {}
-            overlay = null;
+        ViewHolder oldOverlay = overlay;
+        overlay = null;
+        if (windowManager != null && oldOverlay != null) {
+            Handler ui = mainHandler;
+            Runnable remove = () -> {
+                try { windowManager.removeView(oldOverlay.scroll); } catch (Exception ignored) {}
+            };
+            if (ui != null) ui.post(remove); else remove.run();
         }
         if (recognizer != null) { recognizer.close(); recognizer = null; }
         for (TextRecognizer fallback : fallbackRecognizers) fallback.close();
