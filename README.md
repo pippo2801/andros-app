@@ -52,3 +52,23 @@ L'archivio è locale e non accede autonomamente agli account di ChatGPT, Copilot
 ## Sicurezza
 
 Non inserire chiavi API nel codice o committarle nel repository. Se una chiave è stata esposta nella cronologia Git, revocala nel relativo provider. Prima di importare archivi, considera che possono contenere dati personali. L'archivio resta sul dispositivo finché l'utente non lo esporta.
+
+
+## Native Accessibility foundation (branch di sviluppo)
+
+Il branch `feat/native-accessibility-foundation` aggiunge un primo servizio Android
+abilitabile soltanto dall'utente, con pannello Impostazioni per controllare lo stato
+e aprire le impostazioni Accessibilità del sistema.
+
+- Il servizio registra soltanto il package dell'app in primo piano.
+- La lista protetta contiene package bancari/pagamento noti e controlli conservativi
+  sui nomi dei package.
+- Non legge il testo delle schermate, non effettua tocchi, non scrive testo e non
+  invia dati dello schermo.
+- Il bridge TypeScript dichiara esplicitamente `canAutomate: false`.
+- L'utente deve attivare il servizio manualmente nelle impostazioni Android.
+
+Questa è soltanto la base nativa di stato e consenso. Il controllo effettivo delle app
+richiede in seguito autenticazione attendibile, denylist configurabile, verifiche
+per azione, cancellazione immediata e test su dispositivo. Non va considerato ancora
+un assistente autonomo pronto all'uso.
