@@ -11,6 +11,8 @@ public class AndrosAccessibilityServiceTest {
         assertTrue(AndrosAccessibilityService.isProtectedPackage("it.bancoposta"));
         assertTrue(AndrosAccessibilityService.isProtectedPackage("com.example.banking.app"));
         assertTrue(AndrosAccessibilityService.isProtectedPackage("com.paypal.android.p2pmobile"));
+        assertTrue(AndrosAccessibilityService.isProtectedPackage("posteitaliane.posteitaliane"));
+        assertTrue(AndrosAccessibilityService.isProtectedPackage("com.latuabancaperandroid"));
     }
 
     @Test
