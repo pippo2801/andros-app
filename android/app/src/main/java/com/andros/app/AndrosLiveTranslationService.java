@@ -168,6 +168,17 @@ public final class AndrosLiveTranslationService extends Service {
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.getSurface(), null, worker);
         imageReader.setOnImageAvailableListener(reader -> {
             if (stopped || !processing.compareAndSet(false, true)) return;
+            if (AndrosAccessibilityService.isCurrentPackageProtected()) {
+                lastOriginal = "";
+                lastTranslation = "";
+                updateOverlay("Andros Traduzione live\\nSchermata protetta: traduzione sospesa.");
+                processing.set(false);
+                Image protectedImage = null;
+                try { protectedImage = reader.acquireLatestImage(); }
+                catch (Exception ignored) {}
+                finally { if (protectedImage != null) protectedImage.close(); }
+                return;
+            }
             Image image = null;
             try {
                 image = reader.acquireLatestImage();
@@ -206,7 +217,7 @@ public final class AndrosLiveTranslationService extends Service {
     private void processFrame(Bitmap bitmap) {
         InputImage input = InputImage.fromBitmap(bitmap, 0);
         recognizer.process(input)
-            .addOnSuccessListener(workerThread == null ? Runnable::run : worker::post, result -> {
+            .addOnSuccessListener(worker::post, result -> {
                 StringBuilder all = new StringBuilder();
                 for (Text.TextBlock block : result.getTextBlocks()) {
                     String value = block.getText().trim();
