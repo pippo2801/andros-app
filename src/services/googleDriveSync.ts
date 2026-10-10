@@ -65,7 +65,7 @@ export async function signInWithGoogle(clientId: string): Promise<GoogleSession>
       accessTokenEndpoint: 'https://oauth2.googleapis.com/token',
       responseType: 'code',
       pkceEnabled: true,
-      redirectUrl: 'com.andros.app:/',
+      redirectUrl: 'com.andros.app://oauth/',
       scope: 'openid email profile https://www.googleapis.com/auth/drive.appdata',
       resourceUrl: 'https://www.googleapis.com/oauth2/v3/userinfo',
       handleResultOnNewIntent: true,
