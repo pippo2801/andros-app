@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AndrosAccessibilityPlugin.class);
+        registerPlugin(AndrosVoicePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
