@@ -55,7 +55,7 @@ export async function signInWithGoogle(clientId: string): Promise<GoogleSession>
     accessTokenEndpoint: 'https://oauth2.googleapis.com/token',
     responseType: 'code',
     pkceEnabled: true,
-    scope: 'openid email profile https://www.googleapis.com/auth/drive.appdata',
+    scope: 'openid email profile https://www.googleapis.com/auth/drive.file',
     resourceUrl: 'https://www.googleapis.com/oauth2/v3/userinfo',
     logsEnabled: false,
     additionalParameters: { access_type: 'online', include_granted_scopes: 'true' },
@@ -66,7 +66,7 @@ export async function signInWithGoogle(clientId: string): Promise<GoogleSession>
       responseType: 'code',
       pkceEnabled: true,
       redirectUrl: 'com.andros.app://oauth/',
-      scope: 'openid email profile https://www.googleapis.com/auth/drive.appdata',
+      scope: 'openid email profile https://www.googleapis.com/auth/drive.file',
       resourceUrl: 'https://www.googleapis.com/oauth2/v3/userinfo',
       handleResultOnNewIntent: true,
       logsEnabled: false,
@@ -83,7 +83,7 @@ export async function signInWithGoogle(clientId: string): Promise<GoogleSession>
 
 export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapshot): Promise<AndrosSyncSnapshot> {
   const query = new URLSearchParams({
-    spaces: 'appDataFolder',
+    spaces: 'drive',
     q: `name='${APP_DATA_FILENAME}' and trashed=false`,
     fields: 'files(id,name,modifiedTime)',
     pageSize: '100',
@@ -122,7 +122,7 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
     await request(`${UPLOAD_FILES}/${encodeURIComponent(existing.id)}?uploadType=media`, token, 'PATCH', body);
   } else {
     const boundary = `andros_${Date.now()}_boundary`;
-    const metadata = JSON.stringify({ name: APP_DATA_FILENAME, parents: ['appDataFolder'], mimeType: 'application/json' });
+    const metadata = JSON.stringify({ name: APP_DATA_FILENAME, mimeType: 'application/json' });
     const multipart = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${body}\r\n--${boundary}--`;
     await request(`${UPLOAD_FILES}?uploadType=multipart&fields=id,name`, token, 'POST', multipart, `multipart/related; boundary=${boundary}`);
   }
