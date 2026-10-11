@@ -199,6 +199,9 @@ export default function Index() {
       setModelDraft(saved.model);
       const models = await checkOllamaConnection();
       setAvailableModels(models);
+      if (models.length && !models.includes(modelDraft)) {
+        setModelDraft(models[0]);
+      }
       setConnection('online');
       setNotice(models.length ? `Ollama collegato · ${models.length} modelli disponibili` : 'Ollama raggiungibile, ma non risultano modelli installati.');
     } catch (error) {
@@ -315,7 +318,7 @@ export default function Index() {
       ? 'Verifica…'
       : connection === 'offline'
         ? 'Non connesso'
-        : 'Locale · Ollama';
+        : `Locale · ${config.runtime === 'llama.cpp' ? 'llama.cpp' : 'Ollama'}`;
 
   return (
     <main className="relative flex h-screen min-h-[100dvh] flex-col overflow-hidden bg-[#050914] text-slate-100">
