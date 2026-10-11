@@ -110,3 +110,18 @@ Andros Android è un'app autonoma: non richiede che il PC Windows sia acceso, co
 - I dati non vengono sincronizzati tra Android e Windows automaticamente. Ogni futura importazione o sincronizzazione deve essere esplicita e non distruttiva.
 
 **APK:** non generare né caricare una nuova APK durante questo lavoro. La build Android verrà richiesta dall'utente in un momento successivo.
+
+
+## Sincronizzazione manuale (Android)
+
+La UI Android include il pulsante **Sincronizza**. Aprirlo non trasferisce nulla automaticamente:
+- **Esporta pacchetto** crea/condivide un JSON con chat corrente, regole permanenti approvate e archivio.
+- **Importa e unisci** richiede di scegliere un file e confermare prima di applicare i dati.
+- L'importazione conserva la chat corrente, unisce regole e conversazioni evitando duplicati semplici e non trasferisce l'endpoint Ollama del dispositivo.
+- Se i limiti locali non consentono di conservare tutti i dati, l'importazione viene rifiutata invece di eliminare silenziosamente dati esistenti.
+
+Questo è trasferimento manuale tramite file, non sincronizzazione cloud in tempo reale. Il supporto d'import/export nel client Windows deve ancora essere collegato allo stesso formato prima di poter trasferire i dati tra Android e Windows.
+
+## APK sotto controllo dell'utente
+
+Il workflow `.github/workflows/build-apk.yml` è solo manuale (`workflow_dispatch`). Le modifiche al codice non avviano automaticamente la creazione di una APK. Il workflow `web-checks.yml` controlla solo la build web e non produce APK.
