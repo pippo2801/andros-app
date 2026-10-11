@@ -133,12 +133,20 @@ export function importAndMergeSyncPackage(pack: AndrosSyncPackage): SyncImportRe
     return true;
   });
 
+  // Never silently discard existing rules or archived conversations to fit storage limits.
+  if (existingRules.length + newRules.length > 5000) {
+    throw new Error('Troppe regole per completare l’unione senza perdere dati. Nessuna modifica è stata applicata.');
+  }
+  if (existingConversations.length + newConversations.length > 300) {
+    throw new Error('L’archivio supererebbe il limite di 300 conversazioni. Esporta o rimuovi manualmente alcune voci e riprova.');
+  }
+
   // Snapshot all affected keys and roll back if any write fails.
   const keys = [HISTORY_KEY, RULES_KEY, ARCHIVE_KEY];
   const snapshot = new Map(keys.map((key) => [key, localStorage.getItem(key)]));
   try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(existingHistory));
-    localStorage.setItem(RULES_KEY, JSON.stringify([...existingRules, ...newRules].slice(-5000)));
+    // The active conversation remains untouched; only approved rules and the archive are merged.
+    localStorage.setItem(RULES_KEY, JSON.stringify([...existingRules, ...newRules]));
     saveArchivedConversations([...existingConversations, ...newConversations]);
   } catch (error) {
     for (const [key, value] of snapshot) {
