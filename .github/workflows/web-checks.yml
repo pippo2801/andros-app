@@ -11,7 +11,7 @@ on:
       - "vite.config.ts"
       - ".github/workflows/web-checks.yml"
   pull_request:
-    branches: [main]
+    branches: [main, "feat/native-accessibility-foundation"]
     paths:
       - "src/**"
       - "index.html"
