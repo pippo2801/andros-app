@@ -8,7 +8,9 @@ import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
 import { TranslationPanel } from '../components/TranslationPanel';
 import { ArchivePanel } from '../components/ArchivePanel';
+import { SyncPanel } from '../components/SyncPanel';
 import { chooseModelForTask } from '../services/aiRouter';
+import type { SyncRule } from '../services/syncPackage';
 import { recognizeOnce, speakText } from '../services/voice';
 import {
   getAccessibilityStatus,
@@ -83,6 +85,7 @@ export default function Index() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const [translationOpen, setTranslationOpen] = useState(false);
   const [memoryRules, setMemoryRules] = useState<MemoryRule[]>(loadMemoryRules);
   const [ruleDraft, setRuleDraft] = useState('');
@@ -353,6 +356,15 @@ export default function Index() {
           </button>
           <button
             type="button"
+            aria-label="Sincronizza"
+            title="Sincronizza"
+            onClick={() => setSyncOpen(true)}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07] text-cyan-200 transition hover:bg-cyan-400/15"
+          >
+            <RefreshCw size={18} />
+          </button>
+          <button
+            type="button"
             aria-label="Nuova conversazione"
             onClick={handleNewChat}
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/10"
@@ -454,6 +466,16 @@ export default function Index() {
           <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">ANDROS OS · Router automatico locale · {activeModel} · La dettatura trascrive la voce ma non autentica chi parla</p>
         </div>
       </section>
+
+      {syncOpen && (
+        <SyncPanel
+          onClose={() => setSyncOpen(false)}
+          onNotice={setNotice}
+          currentMessages={messages}
+          rules={memoryRules as SyncRule[]}
+          onRulesUpdated={(rules) => setMemoryRules(rules)}
+        />
+      )}
 
       {translationOpen && (
         <TranslationPanel
