@@ -24,6 +24,7 @@ import {
   sendToOllama,
   type ChatMessageData,
   type OllamaConfig,
+  type LocalAiRuntime,
 } from '../services/ollama';
 
 const HISTORY_KEY = 'andros.chat.history.v1';
@@ -96,6 +97,7 @@ export default function Index() {
   const [activeModel, setActiveModel] = useState(config.model);
   const [endpointDraft, setEndpointDraft] = useState(config.endpoint);
   const [modelDraft, setModelDraft] = useState(config.model);
+  const [runtimeDraft, setRuntimeDraft] = useState<LocalAiRuntime>(config.runtime);
   const [connection, setConnection] = useState<ConnectionState>('unknown');
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [settingsError, setSettingsError] = useState('');
@@ -190,12 +192,16 @@ export default function Index() {
     setSettingsError('');
     setConnection('checking');
     try {
-      const saved = saveOllamaConfig({ endpoint: endpointDraft, model: modelDraft });
+      const saved = saveOllamaConfig({ endpoint: endpointDraft, model: modelDraft, runtime: runtimeDraft });
       setConfig(saved);
+      setRuntimeDraft(saved.runtime);
       setEndpointDraft(saved.endpoint);
       setModelDraft(saved.model);
       const models = await checkOllamaConnection();
       setAvailableModels(models);
+      if (models.length && !models.includes(modelDraft)) {
+        setModelDraft(models[0]);
+      }
       setConnection('online');
       setNotice(models.length ? `Ollama collegato · ${models.length} modelli disponibili` : 'Ollama raggiungibile, ma non risultano modelli installati.');
     } catch (error) {
@@ -206,8 +212,9 @@ export default function Index() {
 
   const handleSaveSettings = () => {
     try {
-      const saved = saveOllamaConfig({ endpoint: endpointDraft, model: modelDraft });
+      const saved = saveOllamaConfig({ endpoint: endpointDraft, model: modelDraft, runtime: runtimeDraft });
       setConfig(saved);
+      setRuntimeDraft(saved.runtime);
       setEndpointDraft(saved.endpoint);
       setModelDraft(saved.model);
       setConnection('unknown');
@@ -311,7 +318,7 @@ export default function Index() {
       ? 'Verifica…'
       : connection === 'offline'
         ? 'Non connesso'
-        : 'Locale · Ollama';
+        : `Locale · ${config.runtime === 'llama.cpp' ? 'llama.cpp' : 'Ollama'}`;
 
   return (
     <main className="relative flex h-screen min-h-[100dvh] flex-col overflow-hidden bg-[#050914] text-slate-100">
@@ -545,22 +552,43 @@ export default function Index() {
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200"><Settings2 size={20} /></div>
-                <h2 id="settings-title" className="text-lg font-semibold text-white">Connessione e modello</h2>
-                <p className="mt-1 text-sm leading-5 text-slate-400">Configura il server Ollama raggiungibile dal telefono.</p>
+                <h2 id="settings-title" className="text-lg font-semibold text-white">Motore AI e modello</h2>
+                <p className="mt-1 text-sm leading-5 text-slate-400">Scegli un motore locale: il telefono può funzionare senza PC solo se il modello gira davvero sul telefono.</p>
               </div>
               <button type="button" aria-label="Chiudi impostazioni" onClick={() => setSettingsOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white"><X size={19} /></button>
             </div>
 
             <div className="space-y-4">
               <label className="block">
-                <span className="mb-1.5 block text-xs font-medium text-slate-300">Indirizzo Ollama</span>
-                <input value={endpointDraft} onChange={(event) => setEndpointDraft(event.target.value)} placeholder="http://127.0.0.1:11434" inputMode="url" autoCapitalize="none" autoCorrect="off" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400/50" />
-                <span className="mt-1.5 block text-[11px] leading-4 text-slate-500">Se Ollama gira su un PC, usa l’indirizzo IP del PC raggiungibile dalla stessa rete. 127.0.0.1 funziona solo se Ollama gira sul telefono stesso.</span>
+                <span className="mb-1.5 block text-xs font-medium text-slate-300">Motore AI locale</span>
+                <select
+                  value={runtimeDraft}
+                  onChange={(event) => {
+                    const next = event.target.value as LocalAiRuntime;
+                    setRuntimeDraft(next);
+                    setEndpointDraft(next === 'llama.cpp' ? 'http://127.0.0.1:8080' : 'http://127.0.0.1:11434');
+                    setModelDraft(next === 'llama.cpp' ? 'local-model' : 'qwen2.5-coder:7b');
+                    setAvailableModels([]);
+                    setConnection('unknown');
+                    setSettingsError('');
+                  }}
+                  className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400/50"
+                >
+                  <option value="ollama">Ollama (API Ollama)</option>
+                  <option value="llama.cpp">llama.cpp server (GGUF, locale)</option>
+                </select>
+                <span className="mt-1.5 block text-[11px] leading-4 text-slate-500">Entrambi possono funzionare senza cloud se il motore e il modello sono avviati sul telefono. Andros non scarica né avvia automaticamente i modelli.</span>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-slate-300">Indirizzo del motore</span>
+                <input value={endpointDraft} onChange={(event) => setEndpointDraft(event.target.value)} placeholder={runtimeDraft === 'llama.cpp' ? 'http://127.0.0.1:8080' : 'http://127.0.0.1:11434'} inputMode="url" autoCapitalize="none" autoCorrect="off" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400/50" />
+                <span className="mt-1.5 block text-[11px] leading-4 text-slate-500">{runtimeDraft === 'llama.cpp' ? 'Usa l’indirizzo del server llama.cpp. Per autonomia dal PC, il server deve girare sul telefono (per esempio in Termux) e usare un modello GGUF locale.' : 'Se Ollama gira su un PC, usa il suo IP nella rete locale. 127.0.0.1 indica sempre questo stesso dispositivo, non il PC.'}</span>
               </label>
 
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-300">Nome del modello</span>
-                <input value={modelDraft} onChange={(event) => setModelDraft(event.target.value)} placeholder="qwen2.5-coder:7b" autoCapitalize="none" autoCorrect="off" list="andros-model-list" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400/50" />
+                <input value={modelDraft} onChange={(event) => setModelDraft(event.target.value)} placeholder={runtimeDraft === 'llama.cpp' ? 'local-model' : 'qwen2.5-coder:7b'} autoCapitalize="none" autoCorrect="off" list="andros-model-list" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400/50" />
                 <datalist id="andros-model-list">{availableModels.map((model) => <option key={model} value={model} />)}</datalist>
                 {availableModels.length > 0 && <p className="mt-1.5 text-[11px] text-emerald-300">{availableModels.length} modelli rilevati sul server.</p>}
               </label>
@@ -574,7 +602,7 @@ export default function Index() {
                 </button>
                 <button type="button" onClick={handleSaveSettings} className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white transition hover:brightness-110">Salva impostazioni</button>
               </div>
-              <p className="text-[10px] leading-4 text-slate-500">La configurazione viene salvata sul dispositivo. Ollama deve essere avviato e raggiungibile; l’app non scarica automaticamente i modelli.</p>
+              <p className="text-[10px] leading-4 text-slate-500">La configurazione viene salvata solo su questo dispositivo. Il motore selezionato deve essere avviato e raggiungibile; nessun modello viene scaricato automaticamente e non viene usato un servizio cloud come fallback.</p>
 
               <div className="rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.045] p-4">
                 <div className="flex items-start gap-3">
