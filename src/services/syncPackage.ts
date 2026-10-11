@@ -2,7 +2,6 @@ import type { ChatMessageData } from './ollama';
 import type { ArchivedConversation } from './conversationArchive';
 import { loadArchivedConversations, saveArchivedConversations } from './conversationArchive';
 
-const HISTORY_KEY = 'andros.chat.history.v1';
 const RULES_KEY = 'andros.memory.rules.v1';
 const ARCHIVE_KEY = 'andros.archive.conversations.v1';
 const MAX_PACKAGE_BYTES = 15 * 1024 * 1024;
@@ -102,7 +101,6 @@ export function parseSyncPackage(raw: string): AndrosSyncPackage {
 }
 
 export function importAndMergeSyncPackage(pack: AndrosSyncPackage): SyncImportResult {
-  const existingHistory = readArray<ChatMessageData>(HISTORY_KEY);
   const existingRules = readArray<SyncRule>(RULES_KEY);
   const existingConversations = loadArchivedConversations();
 
@@ -142,7 +140,7 @@ export function importAndMergeSyncPackage(pack: AndrosSyncPackage): SyncImportRe
   }
 
   // Snapshot all affected keys and roll back if any write fails.
-  const keys = [HISTORY_KEY, RULES_KEY, ARCHIVE_KEY];
+  const keys = [RULES_KEY, ARCHIVE_KEY];
   const snapshot = new Map(keys.map((key) => [key, localStorage.getItem(key)]));
   try {
     // The active conversation remains untouched; only approved rules and the archive are merged.
