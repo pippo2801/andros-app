@@ -33,6 +33,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm install
       - name: Build web bundle only (does not build an APK)
         run: npm run build
