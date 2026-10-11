@@ -97,3 +97,16 @@ anti-registrazione. Non usare la dettatura come unica autorizzazione per azioni
 sensibili. L'automazione resta disabilitata nel bridge Accessibilità iniziale.
 
 
+
+
+## Indipendenza Android: il PC non è un requisito
+
+Andros Android è un'app autonoma: non richiede che il PC Windows sia acceso, collegato via USB, raggiungibile in rete o abbia Ollama avviato. L'endpoint predefinito `127.0.0.1:11434` indica il telefono stesso; non va sostituito con l'IP del PC come requisito generale.
+
+- Chat, cronologia, regole e impostazioni locali restano sul telefono.
+- Un endpoint Ollama su PC è soltanto un'opzione avanzata, non la configurazione obbligatoria.
+- Se sul telefono non è disponibile un provider AI locale, l'interfaccia e i dati restano disponibili ma le risposte AI richiedono un provider configurato (per esempio Gemini facoltativo, se supportato e abilitato). Non viene dichiarata una modalità AI offline completa finché non è verificato un modello realmente eseguibile sul telefono.
+- La versione Windows ha processi, configurazione e archivio separati; non viene avviata né controllata dall'app Android.
+- I dati non vengono sincronizzati tra Android e Windows automaticamente. Ogni futura importazione o sincronizzazione deve essere esplicita e non distruttiva.
+
+**APK:** non generare né caricare una nuova APK durante questo lavoro. La build Android verrà richiesta dall'utente in un momento successivo.
