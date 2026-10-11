@@ -7,13 +7,13 @@ Andros OS è un'app Android basata su React, Vite e Capacitor, pensata per funzi
 - Chat locale con cronologia persistente sul dispositivo.
 - Memoria di regole permanenti: una regola entra in memoria solo quando l'utente la salva e approva.
 - Router automatico locale: classifica la richiesta (codice, ragionamento, scrittura, visione o generale) e sceglie tra i modelli Ollama installati.
-- Configurazione dell'endpoint Ollama e scelta del modello preferito.
+- Configurazione del motore AI locale: Ollama oppure llama.cpp server (API OpenAI-compatible) e scelta del modello rilevato.
 - Archivio conversazioni locale: importazione JSON/TXT/MD/HTML/CSV, ricerca full-text, salvataggio della chat corrente, ripristino di una conversazione ed esportazione dell'archivio.
 - Nessun obbligo di account o API a pagamento per la modalità locale.
 
 ## Avvio sviluppo
 
-Prerequisiti: Node.js 22, npm, JDK 21, Android SDK e un'installazione di Ollama raggiungibile dalla rete.
+Prerequisiti sviluppo: Node.js 22, npm, JDK 21 e Android SDK. Per la chat AI serve un motore locale raggiungibile: Ollama oppure llama.cpp server con modello GGUF.
 
 ```bash
 npm install
@@ -37,6 +37,16 @@ Il workflow GitHub Actions `Build Android APK` compila la UI, sincronizza Capaci
 4. Usa **Verifica** per vedere i modelli installati.
 
 L'endpoint `127.0.0.1` indica il dispositivo stesso: non punta automaticamente al PC. Non esporre Ollama direttamente su Internet; su reti non fidate usa una rete privata e regole firewall appropriate.
+
+## Modello locale sul telefono con llama.cpp
+
+Il ramo di sviluppo offre un adattatore per il protocollo OpenAI-compatible di llama.cpp server. In Termux, se hai già compilato/installato llama-server e hai un GGUF compatibile con la RAM del dispositivo, il comando è simile a:
+
+    llama-server -m /percorso/al/modello.gguf --host 127.0.0.1 --port 8080
+
+Sostituisci il percorso con il file reale. In Andros seleziona **llama.cpp server**, verifica la connessione e scegli il modello restituito dal server. Il codice dell'app non installa llama.cpp, non scarica il GGUF e non garantisce prestazioni sufficienti: queste cose vanno verificate sul POCO reale. Se il server non è in esecuzione, Andros mostra l'errore e non invia automaticamente le conversazioni al cloud.
+
+Vedi [l'audit dei moduli open source e il piano Android](docs/OPEN_SOURCE_MODULE_AUDIT.md) per le scelte relative a Open Jarvis, Lucy Screen Agent, Vesta e llama.cpp.
 
 ## Archivio delle vecchie chat
 
