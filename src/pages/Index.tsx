@@ -30,6 +30,44 @@ import {
 } from '../services/chatSessions';
 
 const RULES_KEY = 'andros.memory.rules.v1';
+const CHAT_DRAFTS_KEY = 'andros.chat.drafts.v1';
+
+function readChatDraft(chatId: string): string {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(CHAT_DRAFTS_KEY) || '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return '';
+    const draft = (parsed as Record<string, unknown>)[chatId];
+    return typeof draft === 'string' ? draft : '';
+  } catch {
+    return '';
+  }
+}
+
+function writeChatDraft(chatId: string, draft: string): void {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(CHAT_DRAFTS_KEY) || '{}');
+    const drafts = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+    drafts[chatId] = draft;
+    localStorage.setItem(CHAT_DRAFTS_KEY, JSON.stringify(drafts));
+  } catch (error) {
+    console.warn('Impossibile salvare la bozza della chat:', error);
+  }
+}
+
+function removeChatDraft(chatId: string): void {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(CHAT_DRAFTS_KEY) || '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return;
+    const drafts = parsed as Record<string, unknown>;
+    delete drafts[chatId];
+    localStorage.setItem(CHAT_DRAFTS_KEY, JSON.stringify(drafts));
+  } catch (error) {
+    console.warn('Impossibile rimuovere la bozza della chat:', error);
+  }
+}
+
 
 interface MemoryRule {
   id: string;
@@ -81,7 +119,7 @@ export default function Index() {
   const [sessions, setSessions] = useState<ChatSession[]>(initialSessionState.sessions);
   const [activeChatId, setActiveChatId] = useState(initialSessionState.activeId);
   const messages = sessions.find((session) => session.id === activeChatId)?.messages ?? [];
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(() => readChatDraft(initialSessionState.activeId));
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
   const [activeModel, setActiveModel] = useState(config.model);
@@ -91,6 +129,17 @@ export default function Index() {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [settingsError, setSettingsError] = useState('');
   const [notice, setNotice] = useState('');
+  const [retryPrompt, setRetryPrompt] = useState<string | null>(null);
+  const [retryChatId, setRetryChatId] = useState<string | null>(null);
+  const lastChatMessage = messages[messages.length - 1];
+  const previousChatMessage = messages[messages.length - 2];
+  const retryablePrompt = retryChatId === activeChatId && retryPrompt !== null
+    ? retryPrompt
+    : previousChatMessage?.role === 'user' && lastChatMessage?.role === 'assistant' &&
+      lastChatMessage.content.startsWith('Non sono riuscito a completare la richiesta.')
+      ? previousChatMessage.content
+      : null;
+
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -113,6 +162,7 @@ export default function Index() {
   };
 
   const handleSelectChat = (id: string) => {
+    setInput(readChatDraft(id));
     setActiveChatId(id);
     setIsSidebarOpen(false);
     setNotice('');
@@ -128,7 +178,9 @@ export default function Index() {
   };
 
   const handleDeleteChat = (id: string) => {
+    removeChatDraft(id);
     const next = deleteChatSession(sessions, id, activeChatId);
+    if (id === activeChatId) setInput(readChatDraft(next.activeId));
     setSessions(next.sessions);
     setActiveChatId(next.activeId);
     setNotice('Conversazione eliminata.');
@@ -212,6 +264,8 @@ export default function Index() {
       setNotice(models.length ? `Ollama collegato · ${models.length} modelli disponibili` : 'Ollama raggiungibile, ma non risultano modelli installati.');
     } catch (error) {
       setConnection('offline');
+      setRetryPrompt(text);
+      setRetryChatId(chatIdAtSend);
       setSettingsError(error instanceof Error ? error.message : 'Connessione non riuscita.');
     }
   };
@@ -237,9 +291,16 @@ export default function Index() {
     if (!text || loading) return;
 
     const chatIdAtSend = activeChatId;
-    const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: text }];
+    const lastMessage = messages[messages.length - 1];
+    const previousMessage = messages[messages.length - 2];
+    const replacesFailedTurn = previousMessage?.role === 'user' && previousMessage.content === text &&
+      lastMessage?.role === 'assistant' && lastMessage.content.startsWith('Non sono riuscito a completare la richiesta.');
+    const updatedMessages: ChatMessageData[] = replacesFailedTurn
+      ? messages.slice(0, -1)
+      : [...messages, { role: 'user', content: text }];
     setSessions((current) => updateChatSession(current, chatIdAtSend, updatedMessages));
     setInput('');
+    writeChatDraft(chatIdAtSend, '');
     setLoading(true);
     setNotice('');
 
@@ -288,6 +349,8 @@ export default function Index() {
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, { role: 'assistant', content: responseText }]));
       setConnection('online');
       setNotice(`Router automatico · ${providerLabel} · ${route.reason}`);
+      setRetryPrompt(null);
+      setRetryChatId(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, {
@@ -304,6 +367,7 @@ export default function Index() {
     const restored = archivedMessages.length ? archivedMessages : [WELCOME];
     const imported = createChatSession(restored);
     imported.title = title.trim() || imported.title;
+    setInput(readChatDraft(imported.id));
     setSessions((current) => [imported, ...current]);
     setActiveChatId(imported.id);
     setArchiveOpen(false);
@@ -313,6 +377,7 @@ export default function Index() {
 
   const handleNewChat = () => {
     const created = createChatSession([WELCOME]);
+    setInput(readChatDraft(created.id));
     setSessions((current) => [created, ...current]);
     setActiveChatId(created.id);
     setIsSidebarOpen(false);
@@ -411,7 +476,7 @@ export default function Index() {
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Un assistente personale collegato al modello che scegli. Le conversazioni restano salvate localmente su questo dispositivo.</p>
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 {['Aiutami a organizzare la giornata', 'Spiegami un concetto difficile', 'Aiutami con il codice'].map((suggestion) => (
-                  <button key={suggestion} type="button" onClick={() => setInput(suggestion)} className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/[0.07]">
+                  <button key={suggestion} type="button" onClick={() => { setInput(suggestion); writeChatDraft(activeChatId, suggestion); }} className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/[0.07]">
                     {suggestion}
                   </button>
                 ))}
@@ -424,7 +489,7 @@ export default function Index() {
               <ChatMessage key={index} content={message.content} role={message.role} />
             ))}
             {loading && (
-              <div className="mb-4 flex justify-start">
+              <div className="mb-4 flex justify-start" role="status" aria-live="polite">
                 <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-cyan-400/15 bg-slate-900/90 px-4 py-3 text-sm text-slate-300">
                   <LoaderCircle size={16} className="animate-spin text-cyan-300" />
                   Andros sta elaborando…
@@ -437,15 +502,24 @@ export default function Index() {
 
         <div className="relative shrink-0 border-t border-white/[0.08] bg-slate-950/80 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6 sm:pt-4">
           {notice && (
-            <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 text-xs text-slate-400">
+            <div role="status" aria-live="polite" className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 text-xs text-slate-400">
               <span>{notice}</span>
-              <button type="button" aria-label="Chiudi avviso" onClick={() => setNotice('')} className="text-slate-500 hover:text-white"><X size={14} /></button>
+              <div className="flex shrink-0 items-center gap-2">
+                {retryablePrompt !== null && (
+                  <button type="button" onClick={() => { setInput(retryablePrompt); writeChatDraft(activeChatId, retryablePrompt); }} className="font-medium text-amber-300 hover:text-amber-200">Riprova</button>
+                )}
+                <button type="button" aria-label="Chiudi avviso" onClick={() => setNotice('')} className="text-slate-500 hover:text-white"><X size={14} /></button>
+              </div>
             </div>
           )}
           <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-cyan-400/30">
             <textarea
               value={input}
-              onChange={(event) => setInput(event.target.value)}
+              onChange={(event) => {
+                const draft = event.target.value;
+                setInput(draft);
+                writeChatDraft(activeChatId, draft);
+              }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                   event.preventDefault();
