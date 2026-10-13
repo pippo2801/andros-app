@@ -302,8 +302,20 @@ export default function Index() {
     const imagesForRequest = imagesForRetry.map(({ mimeType, data }) => ({ mimeType, data }));
     const chatIdAtSend = activeChatId;
     const savedContent = imagesForRequest.length ? text + '\n\n[Immagini allegate; file non conservato nella cronologia.]' : text;
-    const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: savedContent }];
-    const requestMessages: ChatMessageData[] = [...messages, { role: 'user', content: text, ...(imagesForRequest.length ? { images: imagesForRequest } : {}) }];
+    // If the previous attempt failed, replace that failed exchange instead of duplicating it in the next request.
+    let baseMessages = messages;
+    const lastMessage = messages[messages.length - 1];
+    const previousUserMessage = messages[messages.length - 2];
+    if (
+      lastMessage?.role === 'assistant' &&
+      lastMessage.content.startsWith('Non sono riuscito a completare la richiesta.') &&
+      previousUserMessage?.role === 'user' &&
+      previousUserMessage.content === savedContent
+    ) {
+      baseMessages = messages.slice(0, -2);
+    }
+    const updatedMessages: ChatMessageData[] = [...baseMessages, { role: 'user', content: savedContent }];
+    const requestMessages: ChatMessageData[] = [...baseMessages, { role: 'user', content: text, ...(imagesForRequest.length ? { images: imagesForRequest } : {}) }];
     setSessions((current) => updateChatSession(current, chatIdAtSend, updatedMessages));
     setInput('');
     setPendingImages([]);
@@ -362,6 +374,8 @@ export default function Index() {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
       // Keep temporary image attachments available for retry after a provider/network failure.
       if (imagesForRetry.length > 0) setPendingImages(imagesForRetry);
+      // Keep the original prompt available so a retry sends the same request, not an empty prompt.
+      setInput(promptText);
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, {
         role: 'assistant',
         content: `Non sono riuscito a completare la richiesta.\n\n${message}\n\n${aiMode === 'gemini' || (aiMode === 'auto' && Boolean(getGeminiApiKey())) ? 'Controlla la chiave API e la disponibilità di Gemini.' : 'Controlla l’indirizzo di Ollama e verifica che il modello scelto sia installato.'}`,
