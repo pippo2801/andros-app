@@ -284,16 +284,8 @@ export default function Index() {
     imageSelectionLock.current = true;
     try {
       const images = await Promise.all(files.map(readImageFile));
-      setPendingImages((current) => {
-        const remaining = Math.max(0, 4 - current.length);
-        const accepted = images.slice(0, remaining);
-        if (accepted.length < images.length) {
-          setNotice('Puoi allegare al massimo 4 immagini per messaggio; alcune immagini non sono state aggiunte.');
-        } else {
-          setNotice('Le immagini saranno inviate al modello ma non conservate nella cronologia.');
-        }
-        return [...current, ...accepted];
-      });
+      setPendingImages((current) => [...current, ...images].slice(0, 4));
+      setNotice('Le immagini saranno inviate al modello ma non conservate nella cronologia.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Impossibile allegare le immagini.');
     } finally {
