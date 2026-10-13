@@ -1,3 +1,8 @@
+/** True only for Ollama model names known to accept image input. */
+export function isVisionModel(model: string): boolean {
+  return /llava|qwen.*vl|vision|minicpm.*v/i.test(model);
+}
+
 export interface RouteDecision {
   model: string;
   reason: string;
@@ -12,12 +17,13 @@ export function chooseModelForTask(
   prompt: string,
   installedModels: string[],
   preferredModel: string,
+  hasImages = false,
 ): RouteDecision {
   const text = prompt.toLocaleLowerCase();
   const has = (...terms: string[]) => terms.some((term) => text.includes(term));
   let category: RouteDecision['category'] = 'general';
 
-  if (has('immagine', 'foto', 'screenshot', 'immagini', 'vision', 'analizza questa figura')) {
+  if (hasImages) {
     category = 'vision';
   } else if (has('codice', 'programma', 'programmazione', 'python', 'javascript', 'typescript', 'react', 'bug', 'errore', 'debug', 'apk', 'android', 'gradle', 'git', 'script', 'funzione', 'classe', 'compila')) {
     category = 'coding';

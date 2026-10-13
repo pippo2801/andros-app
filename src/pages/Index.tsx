@@ -2,12 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Browser } from '@capacitor/browser';
 import {
   AlertCircle, BookOpen, Bot, CheckCircle2, Cloud, Cpu, Menu, Plus, Send, Settings2,
-  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
+  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus, ImagePlus,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
 import { ArchivePanel } from '../components/ArchivePanel';
-import { chooseModelForTask } from '../services/aiRouter';
+import { chooseModelForTask, isVisionModel } from '../services/aiRouter';
 import { getGeminiApiKey, sendToGemini, setGeminiApiKey } from '../services/gemini';
 import { GoogleSyncPanel } from '../components/GoogleSyncPanel';
 import {
@@ -57,10 +57,37 @@ function loadMemoryRules(): MemoryRule[] {
 }
 const WELCOME: ChatMessageData = {
   role: 'assistant',
-  content: 'Ciao! Sono Andros, il tuo assistente personale. Posso aiutarti a ragionare, scrivere, programmare e lavorare sui tuoi progetti. Per rispondere uso il modello Ollama configurato nelle impostazioni.',
+  content: 'Ciao! Sono Andros, il tuo assistente personale. Posso aiutarti a ragionare, scrivere, programmare e lavorare sui tuoi progetti. Per rispondere uso il motore AI selezionato nelle impostazioni.',
 };
 
 type ConnectionState = 'unknown' | 'checking' | 'online' | 'offline';
+
+interface PendingImage {
+  name: string;
+  mimeType: string;
+  data: string;
+}
+
+async function readImageFile(file: File): Promise<PendingImage> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Impossibile leggere l’immagine “${file.name}”.`));
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error(`Formato immagine non valido per “${file.name}”.`));
+        return;
+      }
+      const separator = result.indexOf(',');
+      if (separator < 0) {
+        reject(new Error(`Impossibile elaborare l’immagine “${file.name}”.`));
+        return;
+      }
+      resolve({ name: file.name, mimeType: file.type, data: result.slice(separator + 1) });
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function Index() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -82,6 +109,9 @@ export default function Index() {
   const [activeChatId, setActiveChatId] = useState(initialSessionState.activeId);
   const messages = sessions.find((session) => session.id === activeChatId)?.messages ?? [];
   const [input, setInput] = useState('');
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const imageSelectionLock = useRef(false);
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
   const [activeModel, setActiveModel] = useState(config.model);
@@ -231,15 +261,64 @@ export default function Index() {
     }
   };
 
+  const handleChooseImages = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.currentTarget.files || []);
+    event.currentTarget.value = '';
+    if (!files.length) return;
+    if (pendingImages.length + files.length > 4) {
+      setNotice('Puoi allegare al massimo 4 immagini per messaggio.');
+      return;
+    }
+    if (files.some((file) => file.size > 5 * 1024 * 1024)) {
+      setNotice('Ogni immagine deve essere inferiore a 5 MB.');
+      return;
+    }
+    if (files.some((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type))) {
+      setNotice('Formato non supportato: usa JPG, PNG o WebP.');
+      return;
+    }
+    if (imageSelectionLock.current) {
+      setNotice('Attendi il completamento della selezione immagini prima di aggiungerne altre.');
+      return;
+    }
+    imageSelectionLock.current = true;
+    try {
+      const images = await Promise.all(files.map(readImageFile));
+      setPendingImages((current) => [...current, ...images].slice(0, 4));
+      setNotice('Le immagini saranno inviate al modello ma non conservate nella cronologia.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Impossibile allegare le immagini.');
+    } finally {
+      imageSelectionLock.current = false;
+    }
+  };
+
   const handleSend = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const text = input.trim();
-    if (!text || loading) return;
-
+    const promptText = input.trim();
+    if ((!promptText && !pendingImages.length) || loading) return;
+    const text = promptText || 'Analizza le immagini allegate e descrivi ciò che vedi.';
+    const imagesForRetry = pendingImages;
+    const imagesForRequest = imagesForRetry.map(({ mimeType, data }) => ({ mimeType, data }));
     const chatIdAtSend = activeChatId;
-    const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: text }];
+    const savedContent = imagesForRequest.length ? text + '\n\n[Immagini allegate; file non conservato nella cronologia.]' : text;
+    // If the previous attempt failed, replace that failed exchange instead of duplicating it in the next request.
+    let baseMessages = messages;
+    const lastMessage = messages[messages.length - 1];
+    const previousUserMessage = messages[messages.length - 2];
+    if (
+      lastMessage?.role === 'assistant' &&
+      lastMessage.content.startsWith('Non sono riuscito a completare la richiesta.') &&
+      previousUserMessage?.role === 'user' &&
+      previousUserMessage.content === savedContent
+    ) {
+      baseMessages = messages.slice(0, -2);
+    }
+    const updatedMessages: ChatMessageData[] = [...baseMessages, { role: 'user', content: savedContent }];
+    const requestMessages: ChatMessageData[] = [...baseMessages, { role: 'user', content: text, ...(imagesForRequest.length ? { images: imagesForRequest } : {}) }];
     setSessions((current) => updateChatSession(current, chatIdAtSend, updatedMessages));
     setInput('');
+    setPendingImages([]);
     setLoading(true);
     setNotice('');
 
@@ -253,32 +332,35 @@ export default function Index() {
           // The request below will show the connection error with actionable guidance.
         }
       }
-      const route = chooseModelForTask(text, models, config.model);
+      const route = chooseModelForTask(text, models, config.model, imagesForRequest.length > 0);
       const geminiKey = getGeminiApiKey();
-      const wantsGemini = aiMode === 'gemini' || (aiMode === 'auto' && Boolean(geminiKey) && route.category !== 'coding' && route.category !== 'vision');
+      const wantsGemini = aiMode === 'gemini' || (aiMode === 'auto' && Boolean(geminiKey) && (imagesForRequest.length > 0 || (route.category !== 'coding' && route.category !== 'vision')));
+      if (imagesForRequest.length > 0 && !wantsGemini && !models.some(isVisionModel)) {
+        throw new Error('Per analizzare immagini con Ollama serve un modello visivo installato (per esempio LLaVA o Qwen-VL). In alternativa configura una chiave Gemini e usa la modalità automatica.');
+      }
       let responseText: string;
       let providerLabel: string;
       if (wantsGemini) {
         if (!geminiKey) throw new Error('Hai selezionato Gemini ma manca la chiave API. Apri Impostazioni e inserisci una chiave gratuita di Google AI Studio.');
         try {
-          responseText = await sendToGemini(updatedMessages, geminiKey, memoryRules.map((rule) => rule.text));
-          providerLabel = 'Gemini API · livello gratuito';
+          responseText = await sendToGemini(requestMessages, geminiKey, memoryRules.map((rule) => rule.text));
+          providerLabel = 'Gemini API';
           setActiveModel('gemini-2.5-flash');
         } catch (geminiError) {
-          if (aiMode !== 'auto' || !models.length) throw geminiError;
-          responseText = await sendToOllama(updatedMessages, route.model, memoryRules.map((rule) => rule.text));
+          if (aiMode !== 'auto' || !models.length || (imagesForRequest.length > 0 && !models.some(isVisionModel))) throw geminiError;
+          responseText = await sendToOllama(requestMessages, route.model, memoryRules.map((rule) => rule.text));
           providerLabel = `Ollama fallback · ${route.model}`;
           setActiveModel(route.model);
         }
       } else {
         try {
-          responseText = await sendToOllama(updatedMessages, route.model, memoryRules.map((rule) => rule.text));
+          responseText = await sendToOllama(requestMessages, route.model, memoryRules.map((rule) => rule.text));
           providerLabel = `Ollama · ${route.model}`;
           setActiveModel(route.model);
         } catch (localError) {
-          if (aiMode === 'auto' && geminiKey && route.category !== 'vision') {
-            responseText = await sendToGemini(updatedMessages, geminiKey, memoryRules.map((rule) => rule.text));
-            providerLabel = 'Gemini API · fallback gratuito';
+          if (aiMode === 'auto' && geminiKey && (imagesForRequest.length > 0 || route.category !== 'vision')) {
+            responseText = await sendToGemini(requestMessages, geminiKey, memoryRules.map((rule) => rule.text));
+            providerLabel = 'Gemini API · fallback';
             setActiveModel('gemini-2.5-flash');
           } else {
             throw localError;
@@ -290,9 +372,13 @@ export default function Index() {
       setNotice(`Router automatico · ${providerLabel} · ${route.reason}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
+      // Keep temporary image attachments available for retry after a provider/network failure.
+      if (imagesForRetry.length > 0) setPendingImages(imagesForRetry);
+      // Keep the original prompt available so a retry sends the same request, not an empty prompt.
+      setInput(promptText);
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, {
         role: 'assistant',
-        content: `Non sono riuscito a completare la richiesta.\n\n${message}\n\nApri Impostazioni, controlla l’indirizzo di Ollama e verifica che il modello scelto sia installato.`,
+        content: `Non sono riuscito a completare la richiesta.\n\n${message}\n\n${aiMode === 'gemini' || (aiMode === 'auto' && Boolean(getGeminiApiKey())) ? 'Controlla la chiave API e la disponibilità di Gemini.' : 'Controlla l’indirizzo di Ollama e verifica che il modello scelto sia installato.'}`,
       }]));
       setConnection('offline');
     } finally {
@@ -442,7 +528,24 @@ export default function Index() {
               <button type="button" aria-label="Chiudi avviso" onClick={() => setNotice('')} className="text-slate-500 hover:text-white"><X size={14} /></button>
             </div>
           )}
+          {pendingImages.length > 0 && (
+            <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-2" aria-label="Immagini allegate">
+              {pendingImages.map((image, index) => (
+                <div key={image.name + index} className="flex max-w-full items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.06] px-2 py-1.5 text-xs text-slate-200">
+                  <img
+                    src={`data:${image.mimeType};base64,${image.data}`}
+                    alt={`Anteprima di ${image.name}`}
+                    className="h-10 w-10 shrink-0 rounded-md border border-white/10 object-cover"
+                  />
+                  <span className="max-w-[180px] truncate" title={image.name}>{image.name}</span>
+                  <button type="button" aria-label={'Rimuovi ' + image.name} title="Rimuovi immagine" onClick={() => setPendingImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded p-1 text-slate-400 hover:bg-white/10 hover:text-white"><X size={13} /></button>
+                </div>
+              ))}
+            </div>
+          )}
           <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-cyan-400/30">
+            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(event) => void handleChooseImages(event)} />
+            <button type="button" onClick={() => imageInputRef.current?.click()} disabled={loading || pendingImages.length >= 4} aria-label="Allega immagini" title="Allega immagini (max 4, 5 MB ciascuna)" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 text-slate-300 transition hover:bg-white/10 disabled:opacity-40"><ImagePlus size={18} /></button>
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
@@ -460,7 +563,7 @@ export default function Index() {
             />
             <button
               type="submit"
-              disabled={loading || !input.trim()}
+              disabled={loading || (!input.trim() && pendingImages.length === 0)}
               aria-label="Invia messaggio"
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -527,7 +630,7 @@ export default function Index() {
                   ))}
                 </ul>
               )}
-              <p className="mt-3 text-[10px] leading-4 text-slate-500">La memoria è conservata in locale su questo dispositivo. Le regole vengono inviate al modello Ollama come contesto di sistema quando invii un messaggio.</p>
+              <p className="mt-3 text-[10px] leading-4 text-slate-500">La memoria è conservata in locale su questo dispositivo. Le regole approvate vengono inviate al provider AI attivo come contesto quando invii un messaggio.</p>
             </div>
           </section>
         </div>
@@ -555,9 +658,9 @@ export default function Index() {
                 }} className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/50">
                   <option value="auto">Automatica · gratis prima</option>
                   <option value="ollama">Solo Ollama locale</option>
-                  <option value="gemini">Gemini API (richiede chiave)</option>
+                  <option value="gemini">Gemini API (richiede chiave e può avere limiti di utilizzo)</option>
                 </select>
-                <span className="mt-1.5 block text-[11px] leading-4 text-slate-500">In automatica, il codice resta preferibilmente su Ollama; Gemini può gestire scrittura e ragionamento se la chiave è configurata. Se non configuri Gemini, l’app resta locale.</span>
+                <span className="mt-1.5 block text-[11px] leading-4 text-slate-500">In automatica, il codice resta preferibilmente su Ollama; Gemini può gestire scrittura, ragionamento e immagini se la chiave è configurata. La disponibilità e le quote dipendono dal provider. Se non configuri Gemini, l’app resta locale.</span>
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-300">Chiave Gemini API (facoltativa)</span>
