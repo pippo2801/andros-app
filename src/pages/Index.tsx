@@ -30,6 +30,8 @@ import {
 } from '../services/chatSessions';
 
 const RULES_KEY = 'andros.memory.rules.v1';
+const MAX_MEMORY_RULES = 100;
+const MAX_MEMORY_RULE_LENGTH = 2000;
 
 interface MemoryRule {
   id: string;
