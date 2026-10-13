@@ -7,7 +7,7 @@ import {
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
 import { ArchivePanel } from '../components/ArchivePanel';
-import { chooseModelForTask } from '../services/aiRouter';
+import { chooseModelForTask, isVisionModel } from '../services/aiRouter';
 import { getGeminiApiKey, sendToGemini, setGeminiApiKey } from '../services/gemini';
 import { GoogleSyncPanel } from '../components/GoogleSyncPanel';
 import {
@@ -323,7 +323,7 @@ export default function Index() {
       const route = chooseModelForTask(text, models, config.model, imagesForRequest.length > 0);
       const geminiKey = getGeminiApiKey();
       const wantsGemini = aiMode === 'gemini' || (aiMode === 'auto' && Boolean(geminiKey) && (imagesForRequest.length > 0 || (route.category !== 'coding' && route.category !== 'vision')));
-      if (imagesForRequest.length > 0 && !wantsGemini && !models.some((model) => /llava|qwen.*vl|vision|minicpm.*v/i.test(model))) {
+      if (imagesForRequest.length > 0 && !wantsGemini && !models.some(isVisionModel)) {
         throw new Error('Per analizzare immagini con Ollama serve un modello visivo installato (per esempio LLaVA o Qwen-VL). In alternativa configura una chiave Gemini e usa la modalità automatica.');
       }
       let responseText: string;
