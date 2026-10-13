@@ -119,6 +119,14 @@ export default function Index() {
   const [sessions, setSessions] = useState<ChatSession[]>(initialSessionState.sessions);
   const [activeChatId, setActiveChatId] = useState(initialSessionState.activeId);
   const messages = sessions.find((session) => session.id === activeChatId)?.messages ?? [];
+  const lastChatMessage = messages[messages.length - 1];
+  const previousChatMessage = messages[messages.length - 2];
+  const retryablePrompt = retryChatId === activeChatId && retryPrompt !== null
+    ? retryPrompt
+    : previousChatMessage?.role === 'user' && lastChatMessage?.role === 'assistant' &&
+      lastChatMessage.content.startsWith('Non sono riuscito a completare la richiesta.')
+      ? previousChatMessage.content
+      : null;
   const [input, setInput] = useState(() => readChatDraft(initialSessionState.activeId));
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
@@ -284,8 +292,7 @@ export default function Index() {
     const chatIdAtSend = activeChatId;
     const lastMessage = messages[messages.length - 1];
     const previousMessage = messages[messages.length - 2];
-    const isRetry = retryPrompt === text && retryChatId === chatIdAtSend;
-    const replacesFailedTurn = isRetry && previousMessage?.role === 'user' && previousMessage.content === text &&
+    const replacesFailedTurn = previousMessage?.role === 'user' && previousMessage.content === text &&
       lastMessage?.role === 'assistant' && lastMessage.content.startsWith('Non sono riuscito a completare la richiesta.');
     const updatedMessages: ChatMessageData[] = replacesFailedTurn
       ? messages.slice(0, -1)
@@ -497,8 +504,8 @@ export default function Index() {
             <div role="status" aria-live="polite" className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 text-xs text-slate-400">
               <span>{notice}</span>
               <div className="flex shrink-0 items-center gap-2">
-                {retryPrompt && retryChatId === activeChatId && (
-                  <button type="button" onClick={() => { setInput(retryPrompt); writeChatDraft(activeChatId, retryPrompt); }} className="font-medium text-amber-300 hover:text-amber-200">Riprova</button>
+                {retryablePrompt !== null && (
+                  <button type="button" onClick={() => { setInput(retryablePrompt); writeChatDraft(activeChatId, retryablePrompt); }} className="font-medium text-amber-300 hover:text-amber-200">Riprova</button>
                 )}
                 <button type="button" aria-label="Chiudi avviso" onClick={() => setNotice('')} className="text-slate-500 hover:text-white"><X size={14} /></button>
               </div>
