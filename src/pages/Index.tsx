@@ -31,14 +31,13 @@ import {
 
 const RULES_KEY = 'andros.memory.rules.v1';
 const CHAT_DRAFTS_KEY = 'andros.chat.drafts.v1';
-const MAX_CHAT_DRAFT_LENGTH = 40000;
 
 function readChatDraft(chatId: string): string {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(CHAT_DRAFTS_KEY) || '{}');
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return '';
     const draft = (parsed as Record<string, unknown>)[chatId];
-    return typeof draft === 'string' ? draft.slice(0, MAX_CHAT_DRAFT_LENGTH) : '';
+    return typeof draft === 'string' ? draft : '';
   } catch {
     return '';
   }
@@ -50,7 +49,7 @@ function writeChatDraft(chatId: string, draft: string): void {
     const drafts = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
       ? parsed as Record<string, unknown>
       : {};
-    drafts[chatId] = draft.slice(0, MAX_CHAT_DRAFT_LENGTH);
+    drafts[chatId] = draft;
     localStorage.setItem(CHAT_DRAFTS_KEY, JSON.stringify(drafts));
   } catch (error) {
     console.warn('Impossibile salvare la bozza della chat:', error);
@@ -491,11 +490,10 @@ export default function Index() {
             <textarea
               value={input}
               onChange={(event) => {
-                const draft = event.target.value.slice(0, MAX_CHAT_DRAFT_LENGTH);
+                const draft = event.target.value;
                 setInput(draft);
                 writeChatDraft(activeChatId, draft);
               }}
-              maxLength={MAX_CHAT_DRAFT_LENGTH}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                   event.preventDefault();
