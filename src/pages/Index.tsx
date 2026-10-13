@@ -253,9 +253,9 @@ export default function Index() {
           // The request below will show the connection error with actionable guidance.
         }
       }
-      const route = chooseModelForTask(text, models, config.model);
+      const route = chooseModelForTask(imagesForRequest.length ? text + ' immagini' : text, models, config.model);
       const geminiKey = getGeminiApiKey();
-      const wantsGemini = aiMode === 'gemini' || (aiMode === 'auto' && Boolean(geminiKey) && route.category !== 'coding' && route.category !== 'vision');
+      const wantsGemini = aiMode === 'gemini' || (aiMode === 'auto' && Boolean(geminiKey) && (imagesForRequest.length > 0 || (route.category !== 'coding' && route.category !== 'vision')));
       let responseText: string;
       let providerLabel: string;
       if (wantsGemini) {
@@ -265,7 +265,7 @@ export default function Index() {
           providerLabel = 'Gemini API · livello gratuito';
           setActiveModel('gemini-2.5-flash');
         } catch (geminiError) {
-          if (aiMode !== 'auto' || !models.length) throw geminiError;
+          if (aiMode !== 'auto' || !models.length || (imagesForRequest.length > 0 && !models.some((model) => /llava|qwen.*vl|vision|minicpm.*v/i.test(model)))) throw geminiError;
           responseText = await sendToOllama(updatedMessages, route.model, memoryRules.map((rule) => rule.text));
           providerLabel = `Ollama fallback · ${route.model}`;
           setActiveModel(route.model);
