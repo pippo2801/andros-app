@@ -230,10 +230,47 @@ export function loadArchivedConversations(): ArchivedConversation[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is ArchivedConversation =>
-      item && typeof item.id === 'string' && typeof item.title === 'string' && Array.isArray(item.messages));
+
+    const byId = new Map<string, ArchivedConversation>();
+    for (const value of parsed) {
+      if (!value || typeof value !== 'object') continue;
+      const item = value as Record<string, unknown>;
+      if (typeof item.id !== 'string' || !item.id.trim() ||
+          typeof item.title !== 'string' || !Array.isArray(item.messages)) continue;
+
+      const messages: ArchivedMessage[] = [];
+      for (const rawMessage of item.messages) {
+        if (!rawMessage || typeof rawMessage !== 'object') continue;
+        const message = rawMessage as Record<string, unknown>;
+        if ((message.role !== 'user' && message.role !== 'assistant') ||
+            typeof message.content !== 'string' || !message.content.trim()) continue;
+        const normalized: ArchivedMessage = {
+          role: message.role,
+          content: message.content.slice(0, MAX_MESSAGE_LENGTH),
+        };
+        if (typeof message.timestamp === 'number' && Number.isFinite(message.timestamp)) {
+          normalized.timestamp = message.timestamp;
+        }
+        messages.push(normalized);
+      }
+      if (!messages.length) continue;
+
+      const importedAt = typeof item.importedAt === 'number' && Number.isFinite(item.importedAt)
+        ? item.importedAt
+        : Date.now();
+      const conversation: ArchivedConversation = {
+        id: item.id.trim(),
+        title: item.title.trim().slice(0, 160) || 'Conversazione importata',
+        source: typeof item.source === 'string' ? item.source.slice(0, 120) : 'Archivio locale',
+        importedAt,
+        messages,
+      };
+      // Last valid copy wins when old storage contains duplicate IDs.
+      byId.set(conversation.id, conversation);
+    }
+    return [...byId.values()].slice(-MAX_CONVERSATIONS);
   } catch {
     return [];
   }
