@@ -20,7 +20,7 @@ export interface ChatSessionState {
 
 const WELCOME_MESSAGE: ChatMessageData = {
   role: 'assistant',
-  content: 'Ciao! Sono Andros, il tuo assistente personale. Posso aiutarti a ragionare, scrivere, programmare e lavorare sui tuoi progetti. Per rispondere uso il modello Ollama configurato nelle impostazioni.',
+  content: 'Ciao! Sono Andros, il tuo assistente personale. Posso aiutarti a ragionare, scrivere, programmare e lavorare sui tuoi progetti. Per rispondere uso il motore AI selezionato nelle impostazioni.',
 };
 
 function isMessage(value: unknown): value is ChatMessageData {
