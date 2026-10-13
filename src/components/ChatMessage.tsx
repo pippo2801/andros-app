@@ -22,7 +22,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
     <div className={`flex w-full mb-4 ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
       <div className={`relative group max-w-[85%] p-4 rounded-2xl text-slate-100 shadow-lg border ${
         role === 'user' 
-          ? 'bg-blue-600/30 border-blue-500/30 rounded-br-sm' 
+          ? 'bg-amber-600/30 border-amber-500/30 rounded-br-sm' 
           : 'bg-slate-900/90 border-slate-800 rounded-bl-sm'
       }`}>
         <div className="whitespace-pre-wrap text-sm leading-relaxed">{content}</div>
