@@ -347,7 +347,7 @@ export default function Index() {
           providerLabel = 'Gemini API';
           setActiveModel('gemini-2.5-flash');
         } catch (geminiError) {
-          if (aiMode !== 'auto' || !models.length || (imagesForRequest.length > 0 && !models.some((model) => /llava|qwen.*vl|vision|minicpm.*v/i.test(model)))) throw geminiError;
+          if (aiMode !== 'auto' || !models.length || (imagesForRequest.length > 0 && !models.some(isVisionModel))) throw geminiError;
           responseText = await sendToOllama(requestMessages, route.model, memoryRules.map((rule) => rule.text));
           providerLabel = `Ollama fallback · ${route.model}`;
           setActiveModel(route.model);
