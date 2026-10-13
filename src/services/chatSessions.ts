@@ -114,9 +114,11 @@ export function updateChatSession(
   return sessions.map((session) => session.id !== id ? session : {
     ...session,
     messages: [...messages],
-    title: session.title === 'Nuova conversazione' || session.messages.every((message) => message.role !== 'user')
-      ? makeChatTitle(messages)
-      : session.title,
+    title: messages.some((message) => message.role === 'user')
+      ? (session.title === 'Nuova conversazione' || session.messages.every((message) => message.role !== 'user')
+          ? makeChatTitle(messages)
+          : session.title)
+      : 'Nuova conversazione',
     updatedAt: now,
   });
 }
