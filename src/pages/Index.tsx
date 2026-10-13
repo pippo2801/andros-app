@@ -324,7 +324,7 @@ export default function Index() {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, {
         role: 'assistant',
-        content: `Non sono riuscito a completare la richiesta.\n\n${message}\n\nApri Impostazioni, controlla l’indirizzo di Ollama e verifica che il modello scelto sia installato.`,
+        content: `Non sono riuscito a completare la richiesta.\n\n${message}\n\n${aiMode === 'gemini' || (aiMode === 'auto' && Boolean(getGeminiApiKey())) ? 'Controlla la chiave API e la disponibilità di Gemini.' : 'Controlla l’indirizzo di Ollama e verifica che il modello scelto sia installato.'}`,
       }]));
       setConnection('offline');
     } finally {
