@@ -608,7 +608,7 @@ export default function Index() {
                   ))}
                 </ul>
               )}
-              <p className="mt-3 text-[10px] leading-4 text-slate-500">La memoria è conservata in locale su questo dispositivo. Le regole vengono inviate al modello Ollama come contesto di sistema quando invii un messaggio.</p>
+              <p className="mt-3 text-[10px] leading-4 text-slate-500">La memoria è conservata in locale su questo dispositivo. Le regole approvate vengono inviate al provider AI attivo come contesto quando invii un messaggio.</p>
             </div>
           </section>
         </div>
