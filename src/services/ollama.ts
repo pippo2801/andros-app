@@ -5,6 +5,7 @@ const CONFIG_KEY = 'andros.ollama.config.v1';
 export interface ChatMessageData {
   role: 'user' | 'assistant';
   content: string;
+  images?: Array<{ mimeType: string; data: string }>;
 }
 
 export interface OllamaConfig {
@@ -133,7 +134,11 @@ export async function sendToOllama(
       : [];
     const data = await postJson(`${config.endpoint}/api/chat`, {
       model,
-      messages: [...systemMessage, ...messages],
+      messages: [...systemMessage, ...messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+        ...(message.images?.length ? { images: message.images.map((image) => image.data) } : {}),
+      }))],
       stream: false,
     });
     const content = data?.message?.content;
