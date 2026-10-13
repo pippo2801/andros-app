@@ -276,12 +276,12 @@ export default function Index() {
         }
       } else {
         try {
-          responseText = await sendToOllama(updatedMessages, route.model, memoryRules.map((rule) => rule.text));
+          responseText = await sendToOllama(requestMessages, route.model, memoryRules.map((rule) => rule.text));
           providerLabel = `Ollama · ${route.model}`;
           setActiveModel(route.model);
         } catch (localError) {
           if (aiMode === 'auto' && geminiKey && (imagesForRequest.length > 0 || route.category !== 'vision')) {
-            responseText = await sendToGemini(updatedMessages, geminiKey, memoryRules.map((rule) => rule.text));
+            responseText = await sendToGemini(requestMessages, geminiKey, memoryRules.map((rule) => rule.text));
             providerLabel = 'Gemini API · fallback gratuito';
             setActiveModel('gemini-2.5-flash');
           } else {
