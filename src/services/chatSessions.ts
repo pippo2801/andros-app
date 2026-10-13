@@ -145,3 +145,11 @@ export function deleteChatSession(
     : (safeSessions.some((session) => session.id === activeId) ? activeId : safeSessions[0].id);
   return { activeId: nextActiveId, sessions: safeSessions };
 }
+
+export function renameChatSession(sessions: ChatSession[], id: string, title: string): ChatSession[] {
+  const normalized = title.trim().replace(/\s+/g, ' ').slice(0, 80);
+  if (!normalized) throw new Error('Il titolo della conversazione non può essere vuoto.');
+  return sessions.map((session) => session.id === id
+    ? { ...session, title: normalized, updatedAt: Date.now() }
+    : session);
+}
