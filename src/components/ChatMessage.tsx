@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, Copy, Share2, Volume2, VolumeX } from 'lucide-react';
 import { copyToClipboard } from '../utils/clipboard';
 
@@ -44,6 +44,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
   const [speaking, setSpeaking] = useState(false);
   const speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
   const segments = splitCodeBlocks(content);
+
+  useEffect(() => () => {
+    if (speaking && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, [speaking]);
 
   const copyText = async (text: string, codeIndex?: number) => {
     const success = await copyToClipboard(text);
