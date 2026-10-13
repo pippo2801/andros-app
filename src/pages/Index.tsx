@@ -18,8 +18,16 @@ import {
   type ChatMessageData,
   type OllamaConfig,
 } from '../services/ollama';
+import {
+  createChatSession,
+  deleteChatSession,
+  loadChatSessionState,
+  saveChatSessionState,
+  togglePinnedChat,
+  updateChatSession,
+  type ChatSession,
+} from '../services/chatSessions';
 
-const HISTORY_KEY = 'andros.chat.history.v1';
 const RULES_KEY = 'andros.memory.rules.v1';
 
 interface MemoryRule {
@@ -53,26 +61,6 @@ const WELCOME: ChatMessageData = {
 
 type ConnectionState = 'unknown' | 'checking' | 'online' | 'offline';
 
-function loadHistory(): ChatMessageData[] {
-  try {
-    const stored = localStorage.getItem(HISTORY_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        return parsed.filter(
-          (item) =>
-            item &&
-            (item.role === 'user' || item.role === 'assistant') &&
-            typeof item.content === 'string',
-        );
-      }
-    }
-  } catch (error) {
-    console.warn('Cronologia Andros non disponibile:', error);
-  }
-  return [WELCOME];
-}
-
 export default function Index() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -88,7 +76,10 @@ export default function Index() {
   });
   const [memoryRules, setMemoryRules] = useState<MemoryRule[]>(loadMemoryRules);
   const [ruleDraft, setRuleDraft] = useState('');
-  const [messages, setMessages] = useState<ChatMessageData[]>(loadHistory);
+  const [initialSessionState] = useState(loadChatSessionState);
+  const [sessions, setSessions] = useState<ChatSession[]>(initialSessionState.sessions);
+  const [activeChatId, setActiveChatId] = useState(initialSessionState.activeId);
+  const messages = sessions.find((session) => session.id === activeChatId)?.messages ?? [];
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
@@ -103,12 +94,44 @@ export default function Index() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(messages));
+      saveChatSessionState({ activeId: activeChatId, sessions });
+      const active = sessions.find((session) => session.id === activeChatId);
+      if (active) localStorage.setItem('andros.chat.history.v1', JSON.stringify(active.messages));
     } catch (error) {
-      console.warn('Impossibile salvare la cronologia:', error);
+      console.warn('Impossibile salvare le conversazioni:', error);
+      setNotice('Spazio locale insufficiente: alcune modifiche potrebbero non essere salvate.');
     }
+  }, [sessions, activeChatId]);
+
+  useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, loading]);
+
+  const setActiveMessages = (nextMessages: ChatMessageData[]) => {
+    setSessions((current) => updateChatSession(current, activeChatId, nextMessages));
+  };
+
+  const handleSelectChat = (id: string) => {
+    setActiveChatId(id);
+    setIsSidebarOpen(false);
+    setNotice('');
+  };
+
+  const handleTogglePin = (id: string) => {
+    try {
+      setSessions((current) => togglePinnedChat(current, id));
+      setNotice('Stato della conversazione aggiornato.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Impossibile fissare la conversazione.');
+    }
+  };
+
+  const handleDeleteChat = (id: string) => {
+    const next = deleteChatSession(sessions, id, activeChatId);
+    setSessions(next.sessions);
+    setActiveChatId(next.activeId);
+    setNotice('Conversazione eliminata.');
+  };
 
   useEffect(() => {
     try {
@@ -202,8 +225,9 @@ export default function Index() {
     const text = input.trim();
     if (!text || loading) return;
 
+    const chatIdAtSend = activeChatId;
     const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: text }];
-    setMessages(updatedMessages);
+    setSessions((current) => updateChatSession(current, chatIdAtSend, updatedMessages));
     setInput('');
     setLoading(true);
     setNotice('');
@@ -250,15 +274,15 @@ export default function Index() {
           }
         }
       }
-      setMessages([...updatedMessages, { role: 'assistant', content: responseText }]);
+      setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, { role: 'assistant', content: responseText }]));
       setConnection('online');
       setNotice(`Router automatico · ${providerLabel} · ${route.reason}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
-      setMessages([...updatedMessages, {
+      setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, {
         role: 'assistant',
         content: `Non sono riuscito a completare la richiesta.\n\n${message}\n\nApri Impostazioni, controlla l’indirizzo di Ollama e verifica che il modello scelto sia installato.`,
-      }]);
+      }]));
       setConnection('offline');
     } finally {
       setLoading(false);
@@ -267,20 +291,27 @@ export default function Index() {
 
   const handleLoadArchivedConversation = (title: string, archivedMessages: ChatMessageData[]) => {
     const restored = archivedMessages.length ? archivedMessages : [WELCOME];
-    setMessages(restored);
-    setNotice(`Conversazione caricata: ${title}`);
+    const imported = createChatSession(restored);
+    imported.title = title.trim() || imported.title;
+    setSessions((current) => [imported, ...current]);
+    setActiveChatId(imported.id);
+    setArchiveOpen(false);
+    setIsSidebarOpen(false);
+    setNotice(`Conversazione importata: ${imported.title}`);
   };
 
   const handleNewChat = () => {
-    setMessages([WELCOME]);
+    const created = createChatSession([WELCOME]);
+    setSessions((current) => [created, ...current]);
+    setActiveChatId(created.id);
     setIsSidebarOpen(false);
     setNotice('Nuova conversazione avviata.');
   };
 
   const handleClearHistory = () => {
-    setMessages([WELCOME]);
+    setActiveMessages([WELCOME]);
     setIsSidebarOpen(false);
-    setNotice('Cronologia locale azzerata.');
+    setNotice('Messaggi della conversazione corrente azzerati.');
   };
 
   const connectionLabel = connection === 'online'
@@ -350,6 +381,11 @@ export default function Index() {
         onOpenSettings={openSettings}
         onOpenMemory={openMemory}
         onOpenArchive={openArchive}
+        sessions={sessions}
+        activeChatId={activeChatId}
+        onSelectChat={handleSelectChat}
+        onTogglePin={handleTogglePin}
+        onDeleteChat={handleDeleteChat}
       />
 
       <section className="relative z-0 flex min-h-0 flex-1 flex-col">
