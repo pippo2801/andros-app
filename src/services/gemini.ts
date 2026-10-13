@@ -48,7 +48,7 @@ export async function sendToGemini(
     .reduce<Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>>((items, message) => {
       const role = message.role === 'assistant' ? 'model' as const : 'user' as const;
       const previous = items[items.length - 1];
-      if (previous?.role === role) previous.parts[0].text += '\\n\\n' + message.content;
+      if (previous?.role === role) previous.parts[0].text += '\n\n' + message.content;
       else items.push({ role, parts: [{ text: message.content }] });
       return items;
     }, []);
