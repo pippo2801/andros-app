@@ -79,3 +79,7 @@ Le esportazioni sono file forniti dall'utente. L'autenticazione Google **non** a
 - Le chiavi API non devono essere committate nel repository.
 - I backup cloud includono le conversazioni archiviate e le regole approvate: importa e sincronizza solo contenuti che vuoi conservare su Drive.
 - Questa è una build di test. Login e sync vanno verificati con il Client ID OAuth del progetto e su dispositivo fisico prima di considerare completata la release.
+
+## Backup locale completo
+
+Dalle impostazioni puoi esportare un file JSON con cronologia chat, bozze non inviate, archivio, regole di memoria, modalità AI e configurazione Ollama. Le chiavi API e le credenziali cloud non sono incluse. Il ripristino sostituisce i dati locali correnti, dopo conferma; conserva prima una copia del backup e non importare file provenienti da fonti non attendibili. La procedura tenta di ripristinare i dati precedenti se una scrittura locale fallisce.
