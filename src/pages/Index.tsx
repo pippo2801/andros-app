@@ -468,7 +468,7 @@ export default function Index() {
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Un assistente personale collegato al modello che scegli. Le conversazioni restano salvate localmente su questo dispositivo.</p>
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 {['Aiutami a organizzare la giornata', 'Spiegami un concetto difficile', 'Aiutami con il codice'].map((suggestion) => (
-                  <button key={suggestion} type="button" onClick={() => setInput(suggestion)} className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/[0.07]">
+                  <button key={suggestion} type="button" onClick={() => { setInput(suggestion); writeChatDraft(activeChatId, suggestion); }} className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/[0.07]">
                     {suggestion}
                   </button>
                 ))}
@@ -481,7 +481,7 @@ export default function Index() {
               <ChatMessage key={index} content={message.content} role={message.role} />
             ))}
             {loading && (
-              <div className="mb-4 flex justify-start">
+              <div className="mb-4 flex justify-start" role="status" aria-live="polite">
                 <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-cyan-400/15 bg-slate-900/90 px-4 py-3 text-sm text-slate-300">
                   <LoaderCircle size={16} className="animate-spin text-cyan-300" />
                   Andros sta elaborando…
@@ -494,7 +494,7 @@ export default function Index() {
 
         <div className="relative shrink-0 border-t border-white/[0.08] bg-slate-950/80 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6 sm:pt-4">
           {notice && (
-            <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 text-xs text-slate-400">
+            <div role="status" aria-live="polite" className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 text-xs text-slate-400">
               <span>{notice}</span>
               <div className="flex shrink-0 items-center gap-2">
                 {retryPrompt && retryChatId === activeChatId && (
