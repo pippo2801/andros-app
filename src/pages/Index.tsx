@@ -129,6 +129,8 @@ export default function Index() {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [settingsError, setSettingsError] = useState('');
   const [notice, setNotice] = useState('');
+  const [retryPrompt, setRetryPrompt] = useState<string | null>(null);
+  const [retryChatId, setRetryChatId] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -253,6 +255,8 @@ export default function Index() {
       setNotice(models.length ? `Ollama collegato · ${models.length} modelli disponibili` : 'Ollama raggiungibile, ma non risultano modelli installati.');
     } catch (error) {
       setConnection('offline');
+      setRetryPrompt(text);
+      setRetryChatId(chatIdAtSend);
       setSettingsError(error instanceof Error ? error.message : 'Connessione non riuscita.');
     }
   };
@@ -278,7 +282,14 @@ export default function Index() {
     if (!text || loading) return;
 
     const chatIdAtSend = activeChatId;
-    const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: text }];
+    const lastMessage = messages[messages.length - 1];
+    const previousMessage = messages[messages.length - 2];
+    const isRetry = retryPrompt === text && retryChatId === chatIdAtSend;
+    const replacesFailedTurn = isRetry && previousMessage?.role === 'user' && previousMessage.content === text &&
+      lastMessage?.role === 'assistant' && lastMessage.content.startsWith('Non sono riuscito a completare la richiesta.');
+    const updatedMessages: ChatMessageData[] = replacesFailedTurn
+      ? messages.slice(0, -1)
+      : [...messages, { role: 'user', content: text }];
     setSessions((current) => updateChatSession(current, chatIdAtSend, updatedMessages));
     setInput('');
     writeChatDraft(chatIdAtSend, '');
@@ -330,6 +341,8 @@ export default function Index() {
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, { role: 'assistant', content: responseText }]));
       setConnection('online');
       setNotice(`Router automatico · ${providerLabel} · ${route.reason}`);
+      setRetryPrompt(null);
+      setRetryChatId(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, {
@@ -483,7 +496,12 @@ export default function Index() {
           {notice && (
             <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 text-xs text-slate-400">
               <span>{notice}</span>
-              <button type="button" aria-label="Chiudi avviso" onClick={() => setNotice('')} className="text-slate-500 hover:text-white"><X size={14} /></button>
+              <div className="flex shrink-0 items-center gap-2">
+                {retryPrompt && retryChatId === activeChatId && (
+                  <button type="button" onClick={() => { setInput(retryPrompt); writeChatDraft(activeChatId, retryPrompt); }} className="font-medium text-amber-300 hover:text-amber-200">Riprova</button>
+                )}
+                <button type="button" aria-label="Chiudi avviso" onClick={() => setNotice('')} className="text-slate-500 hover:text-white"><X size={14} /></button>
+              </div>
             </div>
           )}
           <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-cyan-400/30">
