@@ -287,7 +287,7 @@ export default function Index() {
       }
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, { role: 'assistant', content: responseText }]));
       setConnection('online');
-      setNotice(`Router automatico · ${providerLabel} · ${route.reason}`);
+      setNotice(`Router automatico · ${providerLabel} · ${route.reason}${route.warning ? ` · ${route.warning}` : ''}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, {

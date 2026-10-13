@@ -2,6 +2,7 @@ export interface RouteDecision {
   model: string;
   reason: string;
   category: 'coding' | 'reasoning' | 'writing' | 'general' | 'vision';
+  warning?: string;
 }
 
 /**
@@ -43,6 +44,7 @@ export function chooseModelForTask(
     selected = find([/llama3/i, /mistral/i, /gemma/i, /qwen/i]);
   }
 
+  const visionModelAvailable = category !== 'vision' || Boolean(selected);
   selected = selected || models.find((model) => model === preference) || models[0] || preference;
   const reasons: Record<RouteDecision['category'], string> = {
     coding: 'Compito tecnico: priorità a un modello locale orientato al codice.',
@@ -51,5 +53,8 @@ export function chooseModelForTask(
     vision: 'Richiesta visiva: priorità a un modello multimodale locale, se installato.',
     general: 'Richiesta generale: uso del modello locale preferito.',
   };
-  return { model: selected, reason: reasons[category], category };
+  const warning = !visionModelAvailable
+    ? 'Nessun modello multimodale rilevato: la risposta potrebbe non analizzare immagini reali. Installa e seleziona un modello vision in Ollama.'
+    : undefined;
+  return { model: selected, reason: reasons[category], category, ...(warning ? { warning } : {}) };
 }
