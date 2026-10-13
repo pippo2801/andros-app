@@ -40,6 +40,7 @@ interface MemoryRule {
 }
 
 function saveMemoryRules(rules: MemoryRule[]): void {
+  if (rules.length > MAX_MEMORY_RULES) throw new Error('Limite di 100 regole permanenti raggiunto.');
   try {
     localStorage.setItem(RULES_KEY, JSON.stringify(rules));
   } catch {
