@@ -131,11 +131,15 @@ export function togglePinnedChat(sessions: ChatSession[], id: string): ChatSessi
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
 }
 
-export function deleteChatSession(sessions: ChatSession[], id: string): ChatSessionState {
+export function deleteChatSession(
+  sessions: ChatSession[],
+  id: string,
+  activeId: string,
+): ChatSessionState {
   const remaining = sessions.filter((session) => session.id !== id);
   const safeSessions = remaining.length ? remaining : [createChatSession()];
-  return {
-    activeId: safeSessions.some((session) => session.id === id) ? safeSessions[0].id : id,
-    sessions: safeSessions,
-  };
+  const nextActiveId = activeId === id
+    ? safeSessions[0].id
+    : (safeSessions.some((session) => session.id === activeId) ? activeId : safeSessions[0].id);
+  return { activeId: nextActiveId, sessions: safeSessions };
 }
