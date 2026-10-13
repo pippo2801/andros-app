@@ -22,6 +22,7 @@ import {
   createChatSession,
   deleteChatSession,
   loadChatSessionState,
+  renameChatSession,
   saveChatSessionState,
   togglePinnedChat,
   updateChatSession,
@@ -131,6 +132,16 @@ export default function Index() {
     setSessions(next.sessions);
     setActiveChatId(next.activeId);
     setNotice('Conversazione eliminata.');
+  };
+
+  const handleRenameChat = (id: string, title: string) => {
+    try {
+      setSessions((current) => renameChatSession(current, id, title));
+      setNotice('Titolo della conversazione aggiornato.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Impossibile rinominare la conversazione.');
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -386,6 +397,7 @@ export default function Index() {
         onSelectChat={handleSelectChat}
         onTogglePin={handleTogglePin}
         onDeleteChat={handleDeleteChat}
+        onRenameChat={handleRenameChat}
       />
 
       <section className="relative z-0 flex min-h-0 flex-1 flex-col">
