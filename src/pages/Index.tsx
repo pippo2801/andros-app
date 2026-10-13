@@ -514,7 +514,7 @@ export default function Index() {
       {googleOpen && (
         <GoogleSyncPanel
           onClose={() => setGoogleOpen(false)}
-          onSynced={(rules) => setMemoryRules(rules.filter((rule) => rule && typeof rule.id === 'string' && typeof rule.text === 'string' && typeof rule.createdAt === 'number'))}
+          onSynced={(rules) => setMemoryRules(rules.filter((rule) => rule && typeof rule.id === 'string' && typeof rule.text === 'string' && typeof rule.createdAt === 'number').slice(0, MAX_MEMORY_RULES))}
         />
       )}
 
