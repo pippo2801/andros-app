@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Browser } from '@capacitor/browser';
 import {
   AlertCircle, BookOpen, Bot, CheckCircle2, Cloud, Cpu, Menu, Plus, Send, Settings2,
-  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
+  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus, Mic, MicOff,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
@@ -30,6 +30,30 @@ import {
 } from '../services/chatSessions';
 
 const RULES_KEY = 'andros.memory.rules.v1';
+
+interface SpeechRecognitionAlternativeLike { transcript: string }
+interface SpeechRecognitionResultLike { 0: SpeechRecognitionAlternativeLike; isFinal: boolean }
+interface SpeechRecognitionEventLike { resultIndex: number; results: ArrayLike<SpeechRecognitionResultLike> }
+interface SpeechRecognitionErrorLike { error: string }
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorLike) => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | null {
+  const browserWindow = window as Window & {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return browserWindow.SpeechRecognition ?? browserWindow.webkitSpeechRecognition ?? null;
+}
 
 interface MemoryRule {
   id: string;
@@ -82,6 +106,8 @@ export default function Index() {
   const [activeChatId, setActiveChatId] = useState(initialSessionState.activeId);
   const messages = sessions.find((session) => session.id === activeChatId)?.messages ?? [];
   const [input, setInput] = useState('');
+  const [voiceListening, setVoiceListening] = useState(false);
+  const voiceRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
   const [activeModel, setActiveModel] = useState(config.model);
@@ -141,6 +167,58 @@ export default function Index() {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Impossibile rinominare la conversazione.');
       throw error;
+    }
+  };
+
+  useEffect(() => () => {
+    voiceRecognitionRef.current?.abort();
+    voiceRecognitionRef.current = null;
+  }, []);
+
+  const toggleVoiceInput = () => {
+    if (voiceListening) {
+      voiceRecognitionRef.current?.stop();
+      setVoiceListening(false);
+      return;
+    }
+    const Recognition = getSpeechRecognitionConstructor();
+    if (!Recognition) {
+      setNotice('Dettatura non supportata in questo browser. Puoi usare la dettatura della tastiera Android.');
+      return;
+    }
+    try {
+      const recognition = new Recognition();
+      recognition.lang = document.documentElement.lang || 'it-IT';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      const startingText = input.trim();
+      recognition.onresult = (event) => {
+        const chunks: string[] = [];
+        for (let index = 0; index < event.results.length; index += 1) {
+          const result = event.results[index];
+          if (result?.[0]?.transcript) chunks.push(result[0].transcript);
+        }
+        const transcript = chunks.join(' ').trim();
+        if (transcript) setInput([startingText, transcript].filter(Boolean).join(' '));
+      };
+      recognition.onerror = (event) => {
+        setVoiceListening(false);
+        setNotice(event.error === 'not-allowed'
+          ? 'Permesso microfono negato. Abilitalo nelle impostazioni Android o usa la dettatura della tastiera.'
+          : 'Dettatura interrotta: ' + event.error + '. Puoi riprovare o usare la tastiera.');
+      };
+      recognition.onend = () => {
+        setVoiceListening(false);
+        voiceRecognitionRef.current = null;
+      };
+      voiceRecognitionRef.current = recognition;
+      recognition.start();
+      setVoiceListening(true);
+      setNotice('Ascolto attivo: parla, poi premi il microfono per terminare.');
+    } catch {
+      voiceRecognitionRef.current = null;
+      setVoiceListening(false);
+      setNotice('Impossibile avviare il microfono. Controlla i permessi o usa la dettatura della tastiera.');
     }
   };
 
@@ -458,6 +536,16 @@ export default function Index() {
               rows={2}
               className="max-h-48 min-w-0 flex-1 resize-y bg-transparent px-3 py-3 text-sm leading-5 text-slate-100 outline-none placeholder:text-slate-500"
             />
+            <button
+              type="button"
+              onClick={toggleVoiceInput}
+              aria-label={voiceListening ? 'Termina dettatura' : 'Detta un messaggio'}
+              aria-pressed={voiceListening}
+              className={voiceListening ? 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-rose-400/40 bg-rose-400/10 text-rose-200' : 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 text-slate-300 hover:bg-white/10'}
+              title={voiceListening ? 'Termina dettatura' : 'Detta un messaggio'}
+            >
+              {voiceListening ? <MicOff size={18} /> : <Mic size={18} />}
+            </button>
             <button
               type="submit"
               disabled={loading || !input.trim()}
