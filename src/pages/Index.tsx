@@ -336,8 +336,8 @@ export default function Index() {
   return (
     <main className="relative flex h-screen min-h-[100dvh] flex-col overflow-hidden bg-[#050914] text-slate-100">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-36 left-1/3 h-72 w-72 rounded-full bg-blue-600/10 blur-[100px]" />
-        <div className="absolute bottom-20 -right-32 h-80 w-80 rounded-full bg-cyan-500/10 blur-[110px]" />
+        <div className="absolute -top-36 left-1/3 h-72 w-72 rounded-full bg-amber-600/10 blur-[100px]" />
+        <div className="absolute bottom-20 -right-32 h-80 w-80 rounded-full bg-yellow-500/10 blur-[110px]" />
       </div>
 
       <header className="relative z-10 flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-slate-950/75 px-3 py-3 backdrop-blur-xl sm:px-5">
@@ -350,13 +350,13 @@ export default function Index() {
           >
             <Menu size={19} />
           </button>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/25 bg-gradient-to-br from-blue-500/20 to-cyan-400/10 text-cyan-300 shadow-lg shadow-cyan-950/30">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-yellow-400/25 bg-gradient-to-br from-amber-500/20 to-yellow-400/10 text-yellow-300 shadow-lg shadow-yellow-950/30">
             <Bot size={22} />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="truncate text-sm font-bold tracking-[0.18em]">ANDROS OS</span>
-              <span className="hidden rounded-md border border-cyan-400/20 bg-cyan-400/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-cyan-300 sm:inline">PERSONAL AI</span>
+              <span className="hidden rounded-md border border-yellow-400/20 bg-yellow-400/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-yellow-300 sm:inline">PERSONAL AI</span>
             </div>
             <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
               {connection === 'online' ? <Wifi size={12} className="text-emerald-400" /> : connection === 'offline' ? <WifiOff size={12} className="text-amber-400" /> : <Cpu size={12} />}
@@ -377,7 +377,7 @@ export default function Index() {
             type="button"
             aria-label="Impostazioni"
             onClick={openSettings}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/10 hover:text-cyan-200"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-yellow-400/30 hover:bg-yellow-400/10 hover:text-yellow-200"
           >
             <Settings2 size={19} />
           </button>
@@ -404,14 +404,14 @@ export default function Index() {
         <div className="flex-1 overflow-y-auto px-3 py-5 sm:px-6 sm:py-7">
           {messages.length === 1 && messages[0]?.role === 'assistant' && (
             <div className="mx-auto mb-7 mt-2 max-w-2xl text-center sm:mt-8">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-blue-500/20 to-cyan-400/10 text-cyan-200 shadow-2xl shadow-cyan-950/30">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-300/20 bg-gradient-to-br from-amber-500/20 to-yellow-400/10 text-yellow-200 shadow-2xl shadow-yellow-950/30">
                 <Sparkles size={28} />
               </div>
               <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Il tuo spazio, la tua intelligenza.</h1>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Un assistente personale collegato al modello che scegli. Le conversazioni restano salvate localmente su questo dispositivo.</p>
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 {['Aiutami a organizzare la giornata', 'Spiegami un concetto difficile', 'Aiutami con il codice'].map((suggestion) => (
-                  <button key={suggestion} type="button" onClick={() => setInput(suggestion)} className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/[0.07]">
+                  <button key={suggestion} type="button" onClick={() => setInput(suggestion)} className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-slate-300 transition hover:border-yellow-400/30 hover:bg-yellow-400/[0.07]">
                     {suggestion}
                   </button>
                 ))}
@@ -425,8 +425,8 @@ export default function Index() {
             ))}
             {loading && (
               <div className="mb-4 flex justify-start">
-                <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-cyan-400/15 bg-slate-900/90 px-4 py-3 text-sm text-slate-300">
-                  <LoaderCircle size={16} className="animate-spin text-cyan-300" />
+                <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-yellow-400/15 bg-slate-900/90 px-4 py-3 text-sm text-slate-300">
+                  <LoaderCircle size={16} className="animate-spin text-yellow-300" />
                   Andros sta elaborando…
                 </div>
               </div>
@@ -442,7 +442,7 @@ export default function Index() {
               <button type="button" aria-label="Chiudi avviso" onClick={() => setNotice('')} className="text-slate-500 hover:text-white"><X size={14} /></button>
             </div>
           )}
-          <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-cyan-400/30">
+          <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-yellow-400/30">
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
@@ -462,7 +462,7 @@ export default function Index() {
               type="submit"
               disabled={loading || !input.trim()}
               aria-label="Invia messaggio"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Send size={18} />
             </button>
@@ -492,7 +492,7 @@ export default function Index() {
           <section role="dialog" aria-modal="true" aria-labelledby="memory-title" className="w-full max-w-lg rounded-t-3xl border border-white/10 bg-[#0b1120] p-5 shadow-2xl sm:rounded-3xl sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200"><BookOpen size={20} /></div>
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-yellow-400/20 bg-yellow-400/10 text-yellow-200"><BookOpen size={20} /></div>
                 <h2 id="memory-title" className="text-lg font-semibold text-white">Memoria e regole permanenti</h2>
                 <p className="mt-1 text-sm leading-5 text-slate-400">Le regole che scrivi e salvi qui vengono applicate alle richieste successive. Nessuna regola viene aggiunta senza la tua conferma.</p>
               </div>
@@ -502,11 +502,11 @@ export default function Index() {
             <form onSubmit={(event) => { event.preventDefault(); handleSaveRule(); }} className="space-y-3">
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-300">Nuova regola</span>
-                <textarea value={ruleDraft} onChange={(event) => setRuleDraft(event.target.value)} maxLength={500} rows={3} placeholder="Esempio: prima di modificare file importanti, crea un backup." className="w-full resize-y rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm leading-5 text-white outline-none transition focus:border-cyan-400/50" />
+                <textarea value={ruleDraft} onChange={(event) => setRuleDraft(event.target.value)} maxLength={500} rows={3} placeholder="Esempio: prima di modificare file importanti, crea un backup." className="w-full resize-y rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm leading-5 text-white outline-none transition focus:border-yellow-400/50" />
               </label>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[10px] text-slate-500">{ruleDraft.length}/500 caratteri</span>
-                <button type="submit" disabled={!ruleDraft.trim()} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"><Plus size={16} /> Salva e approva</button>
+                <button type="submit" disabled={!ruleDraft.trim()} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"><Plus size={16} /> Salva e approva</button>
               </div>
             </form>
 
@@ -538,7 +538,7 @@ export default function Index() {
           <section role="dialog" aria-modal="true" aria-labelledby="settings-title" className="w-full max-w-lg rounded-t-3xl border border-white/10 bg-[#0b1120] p-5 shadow-2xl sm:rounded-3xl sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200"><Settings2 size={20} /></div>
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-yellow-400/20 bg-yellow-400/10 text-yellow-200"><Settings2 size={20} /></div>
                 <h2 id="settings-title" className="text-lg font-semibold text-white">Connessione e modello</h2>
                 <p className="mt-1 text-sm leading-5 text-slate-400">Configura il server Ollama raggiungibile dal telefono.</p>
               </div>
@@ -552,7 +552,7 @@ export default function Index() {
                   const next = event.target.value as 'auto' | 'ollama' | 'gemini';
                   setAiMode(next);
                   try { localStorage.setItem('andros.ai.mode.v1', next); } catch { /* keep this session's choice */ }
-                }} className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/50">
+                }} className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-yellow-400/50">
                   <option value="auto">Automatica · gratis prima</option>
                   <option value="ollama">Solo Ollama locale</option>
                   <option value="gemini">Gemini API (richiede chiave)</option>
@@ -561,9 +561,9 @@ export default function Index() {
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-300">Chiave Gemini API (facoltativa)</span>
-                <input value={geminiKeyDraft} onChange={(event) => setGeminiKeyDraft(event.target.value)} type="password" placeholder="Incolla la chiave di Google AI Studio" autoCapitalize="none" autoCorrect="off" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/50" />
+                <input value={geminiKeyDraft} onChange={(event) => setGeminiKeyDraft(event.target.value)} type="password" placeholder="Incolla la chiave di Google AI Studio" autoCapitalize="none" autoCorrect="off" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-yellow-400/50" />
                 <div className="mt-2 flex items-center justify-between gap-3">
-                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-[11px] text-cyan-300 underline underline-offset-2">Ottieni una chiave gratuita</a>
+                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-[11px] text-yellow-300 underline underline-offset-2">Ottieni una chiave gratuita</a>
                   <button type="button" onClick={() => {
                     try { setGeminiApiKey(geminiKeyDraft); setSettingsError(''); setNotice(geminiKeyDraft.trim() ? 'Chiave Gemini conservata solo nella sessione corrente.' : 'Gemini disattivato; uso Ollama locale.'); }
                     catch (error) { setSettingsError(error instanceof Error ? error.message : 'Impossibile salvare la chiave.'); }
@@ -571,8 +571,8 @@ export default function Index() {
                 </div>
                 <span className="mt-1.5 block text-[10px] leading-4 text-slate-500">La chiave resta in sessionStorage e non viene salvata nei file del progetto. La modalità gratuita Gemini ha limiti e condizioni del provider; evita di inviare dati sensibili.</span>
               </label>
-              <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3">
-                <p className="text-xs font-semibold text-cyan-100">Altri assistenti</p>
+              <div className="rounded-xl border border-yellow-400/15 bg-yellow-400/[0.04] p-3">
+                <p className="text-xs font-semibold text-yellow-100">Altri assistenti</p>
                 <p className="mt-1 text-[11px] leading-5 text-slate-400">ChatGPT e Copilot non espongono un’API consumer gratuita che consenta ad Andros di usare automaticamente le tue chat private. Puoi aprire i loro servizi o importare gli archivi esportati.</p>
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   <button type="button" onClick={() => void Browser.open({ url: 'https://chatgpt.com/' })} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-xs text-slate-200 hover:bg-white/10">ChatGPT</button>
@@ -580,18 +580,18 @@ export default function Index() {
                   <button type="button" onClick={() => void Browser.open({ url: 'https://gemini.google.com/' })} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-xs text-slate-200 hover:bg-white/10">Gemini web</button>
                 </div>
               </div>
-              <button type="button" onClick={openGoogleSync} className="flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-3 text-sm font-medium text-cyan-100 hover:bg-cyan-400/[0.12]">
+              <button type="button" onClick={openGoogleSync} className="flex w-full items-center justify-center gap-2 rounded-xl border border-yellow-400/20 bg-yellow-400/[0.07] px-3 py-3 text-sm font-medium text-yellow-100 hover:bg-yellow-400/[0.12]">
                 <Cloud size={16} /> Account Google e sincronizzazione
               </button>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-300">Indirizzo Ollama</span>
-                <input value={endpointDraft} onChange={(event) => setEndpointDraft(event.target.value)} placeholder="http://127.0.0.1:11434" inputMode="url" autoCapitalize="none" autoCorrect="off" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400/50" />
+                <input value={endpointDraft} onChange={(event) => setEndpointDraft(event.target.value)} placeholder="http://127.0.0.1:11434" inputMode="url" autoCapitalize="none" autoCorrect="off" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-yellow-400/50" />
                 <span className="mt-1.5 block text-[11px] leading-4 text-slate-500">Se Ollama gira su un PC, usa l’indirizzo IP del PC raggiungibile dalla stessa rete. 127.0.0.1 funziona solo se Ollama gira sul telefono stesso.</span>
               </label>
 
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-300">Nome del modello</span>
-                <input value={modelDraft} onChange={(event) => setModelDraft(event.target.value)} placeholder="qwen2.5-coder:7b" autoCapitalize="none" autoCorrect="off" list="andros-model-list" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400/50" />
+                <input value={modelDraft} onChange={(event) => setModelDraft(event.target.value)} placeholder="qwen2.5-coder:7b" autoCapitalize="none" autoCorrect="off" list="andros-model-list" className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-yellow-400/50" />
                 <datalist id="andros-model-list">{availableModels.map((model) => <option key={model} value={model} />)}</datalist>
                 {availableModels.length > 0 && <p className="mt-1.5 text-[11px] text-emerald-300">{availableModels.length} modelli rilevati sul server.</p>}
               </label>
@@ -603,7 +603,7 @@ export default function Index() {
                 <button type="button" onClick={handleCheckConnection} disabled={connection === 'checking'} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
                   {connection === 'checking' ? <LoaderCircle size={16} className="animate-spin" /> : <Wifi size={16} />} Verifica
                 </button>
-                <button type="button" onClick={handleSaveSettings} className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white transition hover:brightness-110">Salva impostazioni</button>
+                <button type="button" onClick={handleSaveSettings} className="rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 px-3 py-3 text-sm font-semibold text-white transition hover:brightness-110">Salva impostazioni</button>
               </div>
               <p className="text-[10px] leading-4 text-slate-500">La configurazione viene salvata sul dispositivo. Ollama deve essere avviato e raggiungibile; l’app non scarica automaticamente i modelli.</p>
             </div>
