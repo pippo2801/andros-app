@@ -37,19 +37,33 @@ interface MemoryRule {
   createdAt: number;
 }
 
+function saveMemoryRules(rules: MemoryRule[]): void {
+  try {
+    localStorage.setItem(RULES_KEY, JSON.stringify(rules));
+  } catch {
+    throw new Error('Memoria locale piena: non è stato possibile salvare le regole. Esporta o elimina alcuni dati e riprova.');
+  }
+}
+
 function loadMemoryRules(): MemoryRule[] {
   try {
     const stored = localStorage.getItem(RULES_KEY);
     if (!stored) return [];
     const parsed = JSON.parse(stored);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is MemoryRule =>
-        item &&
-        typeof item.id === 'string' &&
-        typeof item.text === 'string' &&
-        typeof item.createdAt === 'number',
-    );
+    const seen = new Set<string>();
+    return parsed.filter((item): item is MemoryRule => {
+      if (!item || typeof item.id !== 'string' || !item.id.trim() ||
+          typeof item.text !== 'string' || !item.text.trim() ||
+          typeof item.createdAt !== 'number' || !Number.isFinite(item.createdAt) ||
+          seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    }).map((item) => ({
+      ...item,
+      id: item.id.trim(),
+      text: item.text.trim().slice(0, 2000),
+    }));
   } catch (error) {
     console.warn('Regole permanenti non disponibili:', error);
     return [];
@@ -146,9 +160,10 @@ export default function Index() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(RULES_KEY, JSON.stringify(memoryRules));
+      saveMemoryRules(memoryRules);
     } catch (error) {
       console.warn('Impossibile salvare le regole permanenti:', error);
+      setNotice(error instanceof Error ? error.message : 'Impossibile salvare la memoria permanente.');
     }
   }, [memoryRules]);
 
@@ -188,13 +203,27 @@ export default function Index() {
       text,
       createdAt: Date.now(),
     };
-    setMemoryRules((current) => [...current, newRule]);
+    const nextRules = [...memoryRules, newRule];
+    try {
+      saveMemoryRules(nextRules);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Impossibile salvare la regola.');
+      return;
+    }
+    setMemoryRules(nextRules);
     setRuleDraft('');
     setNotice('Regola permanente salvata e approvata da te.');
   };
 
   const handleDeleteRule = (id: string) => {
-    setMemoryRules((current) => current.filter((rule) => rule.id !== id));
+    const nextRules = memoryRules.filter((rule) => rule.id !== id);
+    try {
+      saveMemoryRules(nextRules);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Impossibile aggiornare la memoria permanente.');
+      return;
+    }
+    setMemoryRules(nextRules);
     setNotice('Regola rimossa dalla memoria permanente.');
   };
 
