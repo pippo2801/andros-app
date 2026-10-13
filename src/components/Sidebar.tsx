@@ -25,6 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   if (!isOpen) return null;
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const matchesQuery = (session: ChatSession) => !normalizedQuery || session.title.toLocaleLowerCase().includes(normalizedQuery);
@@ -63,7 +64,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <button type="button" aria-label={session.pinned ? 'Rimuovi dai fissati' : 'Fissa conversazione'} title={session.pinned ? 'Rimuovi dai fissati' : 'Fissa conversazione'} onClick={() => onTogglePin(session.id)} className="rounded-md p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-cyan-200">
         {session.pinned ? <PinOff size={14} /> : <Pin size={14} />}
       </button>
-      <button type="button" aria-label="Elimina conversazione" title="Elimina conversazione" onClick={() => onDeleteChat(session.id)} className="rounded-md p-1.5 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-300"><Trash2 size={14} /></button>
+      {deleteConfirmId === session.id ? (
+        <div className="flex shrink-0 items-center gap-1" role="group" aria-label="Conferma eliminazione">
+          <span className="text-[10px] text-rose-300">Eliminare?</span>
+          <button type="button" aria-label="Conferma eliminazione" title="Conferma eliminazione" onClick={() => { onDeleteChat(session.id); setDeleteConfirmId(null); }} className="rounded-md p-1.5 text-rose-300 hover:bg-rose-500/15"><Check size={14} /></button>
+          <button type="button" aria-label="Annulla eliminazione" title="Annulla" onClick={() => setDeleteConfirmId(null)} className="rounded-md p-1.5 text-slate-400 hover:bg-white/10"><X size={14} /></button>
+        </div>
+      ) : (
+        <button type="button" aria-label="Elimina conversazione" title="Elimina conversazione" onClick={() => setDeleteConfirmId(session.id)} className="rounded-md p-1.5 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-300"><Trash2 size={14} /></button>
+      )}
     </div>
   );
 
