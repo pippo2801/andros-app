@@ -260,6 +260,9 @@ export default function Index() {
       const route = chooseModelForTask(imagesForRequest.length ? text + ' immagini' : text, models, config.model);
       const geminiKey = getGeminiApiKey();
       const wantsGemini = aiMode === 'gemini' || (aiMode === 'auto' && Boolean(geminiKey) && (imagesForRequest.length > 0 || (route.category !== 'coding' && route.category !== 'vision')));
+      if (imagesForRequest.length > 0 && !wantsGemini && !models.some((model) => /llava|qwen.*vl|vision|minicpm.*v/i.test(model))) {
+        throw new Error('Per analizzare immagini con Ollama serve un modello visivo installato (per esempio LLaVA o Qwen-VL). In alternativa configura una chiave Gemini e usa la modalità automatica.');
+      }
       let responseText: string;
       let providerLabel: string;
       if (wantsGemini) {
