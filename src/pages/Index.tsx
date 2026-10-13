@@ -233,13 +233,17 @@ export default function Index() {
 
   const handleSend = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const text = input.trim();
-    if (!text || loading) return;
-
+    const promptText = input.trim();
+    if ((!promptText && !pendingImages.length) || loading) return;
+    const text = promptText || 'Analizza le immagini allegate e descrivi ciò che vedi.';
+    const imagesForRequest = pendingImages.map(({ mimeType, data }) => ({ mimeType, data }));
     const chatIdAtSend = activeChatId;
-    const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: text }];
+    const savedContent = imagesForRequest.length ? text + '\n\n[Immagini allegate; file non conservato nella cronologia.]' : text;
+    const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: savedContent }];
+    const requestMessages: ChatMessageData[] = [...messages, { role: 'user', content: text, ...(imagesForRequest.length ? { images: imagesForRequest } : {}) }];
     setSessions((current) => updateChatSession(current, chatIdAtSend, updatedMessages));
     setInput('');
+    setPendingImages([]);
     setLoading(true);
     setNotice('');
 
@@ -261,12 +265,12 @@ export default function Index() {
       if (wantsGemini) {
         if (!geminiKey) throw new Error('Hai selezionato Gemini ma manca la chiave API. Apri Impostazioni e inserisci una chiave gratuita di Google AI Studio.');
         try {
-          responseText = await sendToGemini(updatedMessages, geminiKey, memoryRules.map((rule) => rule.text));
+          responseText = await sendToGemini(requestMessages, geminiKey, memoryRules.map((rule) => rule.text));
           providerLabel = 'Gemini API · livello gratuito';
           setActiveModel('gemini-2.5-flash');
         } catch (geminiError) {
           if (aiMode !== 'auto' || !models.length || (imagesForRequest.length > 0 && !models.some((model) => /llava|qwen.*vl|vision|minicpm.*v/i.test(model)))) throw geminiError;
-          responseText = await sendToOllama(updatedMessages, route.model, memoryRules.map((rule) => rule.text));
+          responseText = await sendToOllama(requestMessages, route.model, memoryRules.map((rule) => rule.text));
           providerLabel = `Ollama fallback · ${route.model}`;
           setActiveModel(route.model);
         }
@@ -276,7 +280,7 @@ export default function Index() {
           providerLabel = `Ollama · ${route.model}`;
           setActiveModel(route.model);
         } catch (localError) {
-          if (aiMode === 'auto' && geminiKey && route.category !== 'vision') {
+          if (aiMode === 'auto' && geminiKey && (imagesForRequest.length > 0 || route.category !== 'vision')) {
             responseText = await sendToGemini(updatedMessages, geminiKey, memoryRules.map((rule) => rule.text));
             providerLabel = 'Gemini API · fallback gratuito';
             setActiveModel('gemini-2.5-flash');
