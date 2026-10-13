@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Copy, Share2 } from 'lucide-react';
+import { Check, Copy, Share2, Volume2, VolumeX } from 'lucide-react';
 import { copyToClipboard } from '../utils/clipboard';
 
 interface ChatMessageProps {
@@ -41,6 +41,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
   const [copied, setCopied] = useState(false);
   const [shareNotice, setShareNotice] = useState('');
   const [copiedCode, setCopiedCode] = useState<number | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
   const segments = splitCodeBlocks(content);
 
   const copyText = async (text: string, codeIndex?: number) => {
@@ -55,6 +57,23 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
       }
     }
     return success;
+  };
+
+  const handleSpeak = () => {
+    if (!speechSupported) return;
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const spokenText = content.replace(/```[\s\S]*?```/g, ' blocco di codice ');
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    utterance.lang = document.documentElement.lang || 'it-IT';
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+    setSpeaking(true);
   };
 
   const handleShare = async () => {
@@ -134,6 +153,19 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
             {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
             <span>{copied ? 'Copiato' : 'Copia'}</span>
           </button>
+          {role === 'assistant' && speechSupported && (
+            <button
+              type="button"
+              onClick={handleSpeak}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs text-slate-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+              title={speaking ? 'Interrompi lettura' : 'Leggi messaggio ad alta voce'}
+              aria-label={speaking ? 'Interrompi lettura del messaggio' : 'Leggi messaggio ad alta voce'}
+              aria-pressed={speaking}
+            >
+              {speaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
+              <span>{speaking ? 'Interrompi' : 'Leggi'}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void handleShare()}
