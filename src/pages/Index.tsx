@@ -91,6 +91,7 @@ export default function Index() {
   const [connection, setConnection] = useState<ConnectionState>('unknown');
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [settingsError, setSettingsError] = useState('');
+  const [backupStatus, setBackupStatus] = useState('');
   const [notice, setNotice] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const backupFileInputRef = useRef<HTMLInputElement>(null);
@@ -121,9 +122,9 @@ export default function Index() {
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setNotice('Backup locale esportato. Conservalo in un luogo sicuro.');
+      setBackupStatus('Backup esportato. Conservalo in un luogo sicuro.');
     } catch (error) {
-      setSettingsError(error instanceof Error ? error.message : 'Impossibile esportare il backup locale.');
+      setBackupStatus(error instanceof Error ? error.message : 'Impossibile esportare il backup locale.');
     }
   };
 
@@ -621,6 +622,7 @@ export default function Index() {
               <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
                 <p className="text-xs font-semibold text-slate-200">Backup locale completo</p>
                 <p className="mt-1 text-[11px] leading-5 text-slate-400">Esporta chat, bozze, archivio, memoria e impostazioni. Non include chiavi API o credenziali cloud. Il ripristino sostituisce i dati locali correnti.</p>
+                {backupStatus && <p role="status" aria-live="polite" className="mt-2 text-[11px] leading-4 text-amber-200">{backupStatus}</p>}
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button type="button" onClick={handleExportLocalBackup} className="flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2.5 text-xs text-slate-200 hover:bg-white/10">
                     <Download size={15} /> Esporta backup
