@@ -324,7 +324,7 @@ export default function Index() {
         if (!geminiKey) throw new Error('Hai selezionato Gemini ma manca la chiave API. Apri Impostazioni e inserisci una chiave gratuita di Google AI Studio.');
         try {
           responseText = await sendToGemini(requestMessages, geminiKey, memoryRules.map((rule) => rule.text));
-          providerLabel = 'Gemini API · livello gratuito';
+          providerLabel = 'Gemini API';
           setActiveModel('gemini-2.5-flash');
         } catch (geminiError) {
           if (aiMode !== 'auto' || !models.length || (imagesForRequest.length > 0 && !models.some((model) => /llava|qwen.*vl|vision|minicpm.*v/i.test(model)))) throw geminiError;
@@ -340,7 +340,7 @@ export default function Index() {
         } catch (localError) {
           if (aiMode === 'auto' && geminiKey && (imagesForRequest.length > 0 || route.category !== 'vision')) {
             responseText = await sendToGemini(requestMessages, geminiKey, memoryRules.map((rule) => rule.text));
-            providerLabel = 'Gemini API · fallback gratuito';
+            providerLabel = 'Gemini API · fallback';
             setActiveModel('gemini-2.5-flash');
           } else {
             throw localError;
@@ -636,9 +636,9 @@ export default function Index() {
                 }} className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/50">
                   <option value="auto">Automatica · gratis prima</option>
                   <option value="ollama">Solo Ollama locale</option>
-                  <option value="gemini">Gemini API (richiede chiave)</option>
+                  <option value="gemini">Gemini API (richiede chiave e può avere limiti di utilizzo)</option>
                 </select>
-                <span className="mt-1.5 block text-[11px] leading-4 text-slate-500">In automatica, il codice resta preferibilmente su Ollama; Gemini può gestire scrittura e ragionamento se la chiave è configurata. Se non configuri Gemini, l’app resta locale.</span>
+                <span className="mt-1.5 block text-[11px] leading-4 text-slate-500">In automatica, il codice resta preferibilmente su Ollama; Gemini può gestire scrittura, ragionamento e immagini se la chiave è configurata. La disponibilità e le quote dipendono dal provider. Se non configuri Gemini, l’app resta locale.</span>
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-300">Chiave Gemini API (facoltativa)</span>
