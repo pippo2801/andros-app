@@ -65,8 +65,8 @@ function loadMemoryRules(): MemoryRule[] {
     }).map((item) => ({
       ...item,
       id: item.id.trim(),
-      text: item.text.trim().slice(0, 2000),
-    }));
+      text: item.text.trim().slice(0, MAX_MEMORY_RULE_LENGTH),
+    })).slice(0, MAX_MEMORY_RULES);
   } catch (error) {
     console.warn('Regole permanenti non disponibili:', error);
     return [];
@@ -197,6 +197,14 @@ export default function Index() {
   const handleSaveRule = () => {
     const text = ruleDraft.trim();
     if (!text) return;
+    if (text.length > MAX_MEMORY_RULE_LENGTH) {
+      setNotice('Ogni regola può contenere al massimo 2000 caratteri.');
+      return;
+    }
+    if (memoryRules.length >= MAX_MEMORY_RULES) {
+      setNotice('Hai raggiunto il limite di 100 regole permanenti. Elimina una regola prima di aggiungerne un’altra.');
+      return;
+    }
     if (memoryRules.some((rule) => rule.text.toLocaleLowerCase() === text.toLocaleLowerCase())) {
       setNotice('Questa regola è già presente nella memoria.');
       return;
