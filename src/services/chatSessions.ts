@@ -30,7 +30,7 @@ function isMessage(value: unknown): value is ChatMessageData {
   if (!value || typeof value !== 'object') return false;
   const item = value as Record<string, unknown>;
   return (item.role === 'user' || item.role === 'assistant') &&
-    typeof item.content === 'string' && item.content.length <= MAX_CHAT_MESSAGE_LENGTH;
+    typeof item.content === 'string';
 }
 
 function validSession(value: unknown): value is ChatSession {
@@ -71,12 +71,12 @@ export function loadChatSessionState(): ChatSessionState {
       if (Array.isArray(parsed.sessions)) {
         const seenIds = new Set<string>();
         const sessions = parsed.sessions.filter(validSession)
+          .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
           .filter((session) => {
             if (seenIds.has(session.id)) return false;
             seenIds.add(session.id);
             return true;
           })
-          .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
           .slice(0, MAX_CHAT_SESSIONS)
           .map((session, index) => ({
             ...session,
