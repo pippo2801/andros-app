@@ -111,6 +111,7 @@ export default function Index() {
   const [input, setInput] = useState('');
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const imageSelectionLock = useRef(false);
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
   const [activeModel, setActiveModel] = useState(config.model);
@@ -276,12 +277,27 @@ export default function Index() {
       setNotice('Formato non supportato: usa JPG, PNG o WebP.');
       return;
     }
+    if (imageSelectionLock.current) {
+      setNotice('Attendi il completamento della selezione immagini prima di aggiungerne altre.');
+      return;
+    }
+    imageSelectionLock.current = true;
     try {
       const images = await Promise.all(files.map(readImageFile));
-      setPendingImages((current) => [...current, ...images].slice(0, 4));
-      setNotice('Le immagini saranno inviate al modello ma non conservate nella cronologia.');
+      setPendingImages((current) => {
+        const remaining = Math.max(0, 4 - current.length);
+        const accepted = images.slice(0, remaining);
+        if (accepted.length < images.length) {
+          setNotice('Puoi allegare al massimo 4 immagini per messaggio; alcune immagini non sono state aggiunte.');
+        } else {
+          setNotice('Le immagini saranno inviate al modello ma non conservate nella cronologia.');
+        }
+        return [...current, ...accepted];
+      });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Impossibile allegare le immagini.');
+    } finally {
+      imageSelectionLock.current = false;
     }
   };
 
