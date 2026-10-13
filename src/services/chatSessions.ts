@@ -3,8 +3,6 @@ import type { ChatMessageData } from './ollama';
 export const CHAT_SESSIONS_KEY = 'andros.chat.sessions.v1';
 export const LEGACY_HISTORY_KEY = 'andros.chat.history.v1';
 export const MAX_PINNED_CHATS = 30;
-export const MAX_CHAT_SESSIONS = 300;
-const MAX_CHAT_MESSAGE_LENGTH = 40000;
 const MAX_CHAT_TITLE_LENGTH = 80;
 
 export interface ChatSession {
@@ -77,16 +75,12 @@ export function loadChatSessionState(): ChatSessionState {
             seenIds.add(session.id);
             return true;
           })
-          .slice(0, MAX_CHAT_SESSIONS)
           .map((session, index) => ({
             ...session,
             id: session.id.trim(),
             title: session.title.trim().slice(0, MAX_CHAT_TITLE_LENGTH),
             pinned: index < MAX_PINNED_CHATS && session.pinned,
-            messages: session.messages.map((message) => ({
-              role: message.role,
-              content: message.content.slice(0, MAX_CHAT_MESSAGE_LENGTH),
-            })),
+            messages: session.messages.map((message) => ({ role: message.role, content: message.content })),
           }));
         if (sessions.length) {
           const activeId = sessions.some((session) => session.id === parsed.activeId)
@@ -123,12 +117,11 @@ export function saveChatSessionState(state: ChatSessionState): void {
     .filter(validSession)
     .slice()
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
-    .slice(0, MAX_CHAT_SESSIONS)
     .map((session, index) => ({
       ...session,
       title: session.title.trim().slice(0, MAX_CHAT_TITLE_LENGTH),
       pinned: index < MAX_PINNED_CHATS && session.pinned,
-      messages: session.messages.map((message) => ({ role: message.role, content: message.content.slice(0, MAX_CHAT_MESSAGE_LENGTH) })),
+      messages: session.messages.map((message) => ({ role: message.role, content: message.content })),
     }));
   localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify({ activeId: state.activeId, sessions }));
 }
