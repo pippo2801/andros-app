@@ -45,11 +45,13 @@ export async function sendToGemini(
   if (!key) throw new Error('Configura una chiave Gemini API gratuita in Google AI Studio oppure usa Ollama.');
   const contents = messages
     .filter((message, index) => index > 0 || message.role !== 'assistant')
-    .reduce<Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>>((items, message) => {
+    .reduce<Array<{ role: 'user' | 'model'; parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> }>>((items, message) => {
       const role = message.role === 'assistant' ? 'model' as const : 'user' as const;
       const previous = items[items.length - 1];
-      if (previous?.role === role) previous.parts[0].text += '\n\n' + message.content;
-      else items.push({ role, parts: [{ text: message.content }] });
+      if (previous?.role === role) {
+        previous.parts.push({ text: '\n\n' + message.content }, ...(message.images || []).map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.data } })));
+      }
+      else items.push({ role, parts: [{ text: message.content }, ...(message.images || []).map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.data } }))] });
       return items;
     }, []);
   const body: Record<string, unknown> = { contents, generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } };
