@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Browser } from '@capacitor/browser';
 import {
   AlertCircle, BookOpen, Bot, CheckCircle2, Cloud, Cpu, Menu, Plus, Send, Settings2,
-  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus, Search,
+  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus, Search, Search,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
@@ -61,6 +61,7 @@ const WELCOME: ChatMessageData = {
 };
 
 type ConnectionState = 'unknown' | 'checking' | 'online' | 'offline';
+interface WebResult { title: string; snippet: string; url: string }
 
 export default function Index() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -91,6 +92,8 @@ export default function Index() {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [settingsError, setSettingsError] = useState('');
   const [notice, setNotice] = useState('');
+  const [webResults, setWebResults] = useState<WebResult[]>([]);
+  const [webSearchLoading, setWebSearchLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -234,14 +237,39 @@ export default function Index() {
   const handleWebSearch = async () => {
     const query = input.trim();
     if (!query) {
-      setNotice('Scrivi una domanda o delle parole chiave prima di cercare sul web.');
+      setNotice('Scrivi una domanda o delle parole chiave prima di cercare.');
       return;
     }
+    setWebSearchLoading(true);
+    setWebResults([]);
+    setNotice('');
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12000);
     try {
-      await Browser.open({ url: 'https://duckduckgo.com/?q=' + encodeURIComponent(query) });
-      setNotice('Ricerca web aperta nel browser. I risultati provengono dal motore di ricerca, non da Andros.');
-    } catch {
-      setNotice('Non riesco ad aprire il browser per la ricerca web.');
+      const url = 'https://it.wikipedia.org/w/api.php?action=query&list=search&srsearch=' +
+        encodeURIComponent(query) + '&format=json&origin=*&srlimit=5&utf8=1';
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const data = await response.json();
+      const results: WebResult[] = (Array.isArray(data?.query?.search) ? data.query.search : [])
+        .filter((item: any) => typeof item?.title === 'string' && typeof item?.snippet === 'string')
+        .map((item: any) => {
+          const snippet = new DOMParser().parseFromString(item.snippet, 'text/html').body.textContent || '';
+          return {
+            title: item.title,
+            snippet: snippet.replace(/\s+/g, ' ').trim(),
+            url: 'https://it.wikipedia.org/wiki/' + encodeURIComponent(item.title.replace(/ /g, '_')),
+          };
+        });
+      setWebResults(results);
+      setNotice(results.length ? 'Risultati Wikipedia caricati. Controlla le fonti prima di usare le informazioni.' : 'Nessun risultato trovato su Wikipedia italiana.');
+    } catch (error) {
+      setNotice(error instanceof Error && error.name === 'AbortError'
+        ? 'La ricerca è scaduta. Controlla la connessione e riprova.'
+        : 'Ricerca Wikipedia non disponibile. Controlla la connessione e riprova.');
+    } finally {
+      window.clearTimeout(timeout);
+      setWebSearchLoading(false);
     }
   };
 
