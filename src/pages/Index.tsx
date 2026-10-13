@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Browser } from '@capacitor/browser';
 import {
   AlertCircle, BookOpen, Bot, CheckCircle2, Cloud, Cpu, Menu, Plus, Send, Settings2,
-  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
+  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus, ImagePlus,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
@@ -62,6 +62,33 @@ const WELCOME: ChatMessageData = {
 
 type ConnectionState = 'unknown' | 'checking' | 'online' | 'offline';
 
+interface PendingImage {
+  name: string;
+  mimeType: string;
+  data: string;
+}
+
+async function readImageFile(file: File): Promise<PendingImage> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Impossibile leggere l’immagine “${file.name}”.`));
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error(`Formato immagine non valido per “${file.name}”.`));
+        return;
+      }
+      const separator = result.indexOf(',');
+      if (separator < 0) {
+        reject(new Error(`Impossibile elaborare l’immagine “${file.name}”.`));
+        return;
+      }
+      resolve({ name: file.name, mimeType: file.type, data: result.slice(separator + 1) });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function Index() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -82,6 +109,8 @@ export default function Index() {
   const [activeChatId, setActiveChatId] = useState(initialSessionState.activeId);
   const messages = sessions.find((session) => session.id === activeChatId)?.messages ?? [];
   const [input, setInput] = useState('');
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
   const [activeModel, setActiveModel] = useState(config.model);
@@ -261,7 +290,8 @@ export default function Index() {
     const promptText = input.trim();
     if ((!promptText && !pendingImages.length) || loading) return;
     const text = promptText || 'Analizza le immagini allegate e descrivi ciò che vedi.';
-    const imagesForRequest = pendingImages.map(({ mimeType, data }) => ({ mimeType, data }));
+    const imagesForRetry = pendingImages;
+    const imagesForRequest = imagesForRetry.map(({ mimeType, data }) => ({ mimeType, data }));
     const chatIdAtSend = activeChatId;
     const savedContent = imagesForRequest.length ? text + '\n\n[Immagini allegate; file non conservato nella cronologia.]' : text;
     const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: savedContent }];
@@ -323,7 +353,7 @@ export default function Index() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
       // Keep temporary image attachments available for retry after a provider/network failure.
-      if (imagesForRequest.length > 0) setPendingImages(imagesForRequest);
+      if (imagesForRetry.length > 0) setPendingImages(imagesForRetry);
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, {
         role: 'assistant',
         content: `Non sono riuscito a completare la richiesta.\n\n${message}\n\n${aiMode === 'gemini' || (aiMode === 'auto' && Boolean(getGeminiApiKey())) ? 'Controlla la chiave API e la disponibilità di Gemini.' : 'Controlla l’indirizzo di Ollama e verifica che il modello scelto sia installato.'}`,
