@@ -1,5 +1,5 @@
-import React from 'react';
-import { Archive, BookOpen, Bot, MessageSquarePlus, Settings2, Trash2, X, Pin, PinOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { Archive, BookOpen, Bot, MessageSquarePlus, Settings2, Trash2, X, Pin, PinOff, Search, Pencil, Check } from 'lucide-react';
 import type { ChatSession } from '../services/chatSessions';
 
 interface SidebarProps {
@@ -15,22 +15,51 @@ interface SidebarProps {
   onSelectChat: (id: string) => void;
   onTogglePin: (id: string) => void;
   onDeleteChat: (id: string) => void;
+  onRenameChat: (id: string, title: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   isOpen, onClose, onNewChat, onClearHistory, onOpenSettings, onOpenMemory, onOpenArchive,
-  sessions, activeChatId, onSelectChat, onTogglePin, onDeleteChat,
+  sessions, activeChatId, onSelectChat, onTogglePin, onDeleteChat, onRenameChat,
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [titleDraft, setTitleDraft] = useState('');
   if (!isOpen) return null;
-  const pinned = sessions.filter((session) => session.pinned);
-  const recent = sessions.filter((session) => !session.pinned);
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const matchesQuery = (session: ChatSession) => !normalizedQuery || session.title.toLocaleLowerCase().includes(normalizedQuery);
+  const pinned = sessions.filter((session) => session.pinned && matchesQuery(session));
+  const recent = sessions.filter((session) => !session.pinned && matchesQuery(session));
+  const beginRename = (session: ChatSession) => {
+    setEditingId(session.id);
+    setTitleDraft(session.title);
+  };
+  const saveRename = (id: string) => {
+    try {
+      onRenameChat(id, titleDraft);
+      setEditingId(null);
+      setTitleDraft('');
+    } catch {
+      // The parent displays validation feedback.
+    }
+  };
 
   const renderSession = (session: ChatSession) => (
     <div key={session.id} className={`group flex items-center gap-1 rounded-xl border px-2 py-1.5 transition ${session.id === activeChatId ? 'border-cyan-400/25 bg-cyan-400/[0.08]' : 'border-transparent hover:border-white/[0.08] hover:bg-white/[0.04]'}`}>
-      <button type="button" onClick={() => onSelectChat(session.id)} title={session.title} className="min-w-0 flex-1 py-1 text-left">
-        <span className="block truncate text-xs font-medium text-slate-200">{session.title}</span>
-        <span className="mt-0.5 block text-[10px] text-slate-500">{session.messages.filter((message) => message.role === 'user').length} messaggi utente</span>
-      </button>
+      <div className="min-w-0 flex-1 py-1">
+        {editingId === session.id ? (
+          <form onSubmit={(event) => { event.preventDefault(); saveRename(session.id); }} className="flex items-center gap-1">
+            <input autoFocus value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} maxLength={80} aria-label="Nuovo titolo" className="min-w-0 flex-1 rounded-md border border-cyan-400/30 bg-slate-950 px-2 py-1 text-xs text-white outline-none" />
+            <button type="submit" aria-label="Salva titolo" className="rounded-md p-1 text-emerald-300 hover:bg-emerald-400/10"><Check size={14} /></button>
+          </form>
+        ) : (
+          <button type="button" onClick={() => onSelectChat(session.id)} title={session.title} className="block w-full min-w-0 text-left">
+            <span className="block truncate text-xs font-medium text-slate-200">{session.title}</span>
+            <span className="mt-0.5 block text-[10px] text-slate-500">{session.messages.filter((message) => message.role === 'user').length} messaggi utente</span>
+          </button>
+        )}
+      </div>
+      <button type="button" aria-label="Rinomina conversazione" title="Rinomina conversazione" onClick={() => beginRename(session)} className="rounded-md p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-cyan-200"><Pencil size={14} /></button>
       <button type="button" aria-label={session.pinned ? 'Rimuovi dai fissati' : 'Fissa conversazione'} title={session.pinned ? 'Rimuovi dai fissati' : 'Fissa conversazione'} onClick={() => onTogglePin(session.id)} className="rounded-md p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-cyan-200">
         {session.pinned ? <PinOff size={14} /> : <Pin size={14} />}
       </button>
@@ -58,7 +87,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-          <div className="mb-2 flex items-center justify-between px-1"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Fissate</span><span className="text-[10px] text-slate-600">{pinned.length}/30</span></div>
+          <label className="mb-4 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-slate-950/70 px-3 py-2.5 text-slate-500 focus-within:border-cyan-400/30">
+            <Search size={15} />
+            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Cerca conversazioni…" aria-label="Cerca conversazioni" className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-slate-600" />
+            {searchQuery && <button type="button" aria-label="Cancella ricerca" onClick={() => setSearchQuery('')} className="text-slate-500 hover:text-white"><X size={13} /></button>}
+          </label>
+          <div className="mb-2 flex items-center justify-between px-1"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Fissate</span><span className="text-[10px] text-slate-600">{sessions.filter((session) => session.pinned).length}/30</span></div>
           <div className="space-y-1">{pinned.length ? pinned.map(renderSession) : <p className="px-2 py-2 text-[11px] text-slate-600">Nessuna chat fissata.</p>}</div>
           <div className="mb-2 mt-5 px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Recenti</div>
           <div className="space-y-1">{recent.length ? recent.map(renderSession) : <p className="px-2 py-2 text-[11px] text-slate-600">Nessun'altra conversazione.</p>}</div>
