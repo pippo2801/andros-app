@@ -119,14 +119,6 @@ export default function Index() {
   const [sessions, setSessions] = useState<ChatSession[]>(initialSessionState.sessions);
   const [activeChatId, setActiveChatId] = useState(initialSessionState.activeId);
   const messages = sessions.find((session) => session.id === activeChatId)?.messages ?? [];
-  const lastChatMessage = messages[messages.length - 1];
-  const previousChatMessage = messages[messages.length - 2];
-  const retryablePrompt = retryChatId === activeChatId && retryPrompt !== null
-    ? retryPrompt
-    : previousChatMessage?.role === 'user' && lastChatMessage?.role === 'assistant' &&
-      lastChatMessage.content.startsWith('Non sono riuscito a completare la richiesta.')
-      ? previousChatMessage.content
-      : null;
   const [input, setInput] = useState(() => readChatDraft(initialSessionState.activeId));
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
@@ -139,6 +131,15 @@ export default function Index() {
   const [notice, setNotice] = useState('');
   const [retryPrompt, setRetryPrompt] = useState<string | null>(null);
   const [retryChatId, setRetryChatId] = useState<string | null>(null);
+  const lastChatMessage = messages[messages.length - 1];
+  const previousChatMessage = messages[messages.length - 2];
+  const retryablePrompt = retryChatId === activeChatId && retryPrompt !== null
+    ? retryPrompt
+    : previousChatMessage?.role === 'user' && lastChatMessage?.role === 'assistant' &&
+      lastChatMessage.content.startsWith('Non sono riuscito a completare la richiesta.')
+      ? previousChatMessage.content
+      : null;
+
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
