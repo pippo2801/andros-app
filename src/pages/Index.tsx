@@ -30,6 +30,45 @@ import {
 } from '../services/chatSessions';
 
 const RULES_KEY = 'andros.memory.rules.v1';
+const CHAT_DRAFTS_KEY = 'andros.chat.drafts.v1';
+const MAX_CHAT_DRAFT_LENGTH = 40000;
+
+function readChatDraft(chatId: string): string {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(CHAT_DRAFTS_KEY) || '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return '';
+    const draft = (parsed as Record<string, unknown>)[chatId];
+    return typeof draft === 'string' ? draft.slice(0, MAX_CHAT_DRAFT_LENGTH) : '';
+  } catch {
+    return '';
+  }
+}
+
+function writeChatDraft(chatId: string, draft: string): void {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(CHAT_DRAFTS_KEY) || '{}');
+    const drafts = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+    drafts[chatId] = draft.slice(0, MAX_CHAT_DRAFT_LENGTH);
+    localStorage.setItem(CHAT_DRAFTS_KEY, JSON.stringify(drafts));
+  } catch (error) {
+    console.warn('Impossibile salvare la bozza della chat:', error);
+  }
+}
+
+function removeChatDraft(chatId: string): void {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(CHAT_DRAFTS_KEY) || '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return;
+    const drafts = parsed as Record<string, unknown>;
+    delete drafts[chatId];
+    localStorage.setItem(CHAT_DRAFTS_KEY, JSON.stringify(drafts));
+  } catch (error) {
+    console.warn('Impossibile rimuovere la bozza della chat:', error);
+  }
+}
+
 
 interface MemoryRule {
   id: string;
@@ -81,7 +120,7 @@ export default function Index() {
   const [sessions, setSessions] = useState<ChatSession[]>(initialSessionState.sessions);
   const [activeChatId, setActiveChatId] = useState(initialSessionState.activeId);
   const messages = sessions.find((session) => session.id === activeChatId)?.messages ?? [];
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(() => readChatDraft(initialSessionState.activeId));
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<OllamaConfig>(getOllamaConfig);
   const [activeModel, setActiveModel] = useState(config.model);
@@ -113,6 +152,7 @@ export default function Index() {
   };
 
   const handleSelectChat = (id: string) => {
+    setInput(readChatDraft(id));
     setActiveChatId(id);
     setIsSidebarOpen(false);
     setNotice('');
@@ -128,7 +168,9 @@ export default function Index() {
   };
 
   const handleDeleteChat = (id: string) => {
+    removeChatDraft(id);
     const next = deleteChatSession(sessions, id, activeChatId);
+    if (id === activeChatId) setInput(readChatDraft(next.activeId));
     setSessions(next.sessions);
     setActiveChatId(next.activeId);
     setNotice('Conversazione eliminata.');
@@ -240,6 +282,7 @@ export default function Index() {
     const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: text }];
     setSessions((current) => updateChatSession(current, chatIdAtSend, updatedMessages));
     setInput('');
+    writeChatDraft(chatIdAtSend, '');
     setLoading(true);
     setNotice('');
 
@@ -304,6 +347,7 @@ export default function Index() {
     const restored = archivedMessages.length ? archivedMessages : [WELCOME];
     const imported = createChatSession(restored);
     imported.title = title.trim() || imported.title;
+    setInput(readChatDraft(imported.id));
     setSessions((current) => [imported, ...current]);
     setActiveChatId(imported.id);
     setArchiveOpen(false);
@@ -313,6 +357,7 @@ export default function Index() {
 
   const handleNewChat = () => {
     const created = createChatSession([WELCOME]);
+    setInput(readChatDraft(created.id));
     setSessions((current) => [created, ...current]);
     setActiveChatId(created.id);
     setIsSidebarOpen(false);
@@ -445,7 +490,12 @@ export default function Index() {
           <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-cyan-400/30">
             <textarea
               value={input}
-              onChange={(event) => setInput(event.target.value)}
+              onChange={(event) => {
+                const draft = event.target.value.slice(0, MAX_CHAT_DRAFT_LENGTH);
+                setInput(draft);
+                writeChatDraft(activeChatId, draft);
+              }}
+              maxLength={MAX_CHAT_DRAFT_LENGTH}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                   event.preventDefault();
