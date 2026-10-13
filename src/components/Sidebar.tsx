@@ -32,6 +32,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const matchesQuery = (session: ChatSession) => !normalizedQuery ||
     session.title.toLocaleLowerCase().includes(normalizedQuery) ||
     session.messages.some((message) => message.content.toLocaleLowerCase().includes(normalizedQuery));
+  const getSearchSnippet = (session: ChatSession) => {
+    if (!normalizedQuery) return '';
+    const match = session.messages.find((message) => message.content.toLocaleLowerCase().includes(normalizedQuery));
+    if (!match) return '';
+    const text = match.content.replace(/\\s+/g, ' ').trim();
+    const index = text.toLocaleLowerCase().indexOf(normalizedQuery);
+    const start = Math.max(0, index - 24);
+    const end = Math.min(text.length, index + normalizedQuery.length + 56);
+    return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
+  };
   const pinned = sessions.filter((session) => session.pinned && matchesQuery(session));
   const recent = sessions.filter((session) => !session.pinned && matchesQuery(session));
   const beginRename = (session: ChatSession) => {
@@ -59,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <button type="button" onClick={() => onSelectChat(session.id)} title={session.title} className="block w-full min-w-0 text-left">
             <span className="block truncate text-xs font-medium text-slate-200">{session.title}</span>
-            <span className="mt-0.5 block text-[10px] text-slate-500">{session.messages.filter((message) => message.role === 'user').length} messaggi utente</span>
+            <span className="mt-0.5 block text-[10px] text-slate-500">{getSearchSnippet(session) || (session.messages.filter((message) => message.role === 'user').length + ' messaggi utente')}</span>
           </button>
         )}
       </div>
