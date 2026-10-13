@@ -35,10 +35,21 @@ async function request(url: string, token: string, method = 'GET', data?: string
     }
     return response.data;
   }
-  const response = await fetch(url, { method, headers, body: data });
-  if (!response.ok) throw new Error(`Google Drive ha risposto con HTTP ${response.status}.`);
-  if (response.status === 204) return null;
-  return response.json();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  try {
+    const response = await fetch(url, { method, headers, body: data, signal: controller.signal });
+    if (!response.ok) throw new Error(`Google Drive ha risposto con HTTP ${response.status}.`);
+    if (response.status === 204) return null;
+    return await response.json();
+  } catch (cause) {
+    if (cause instanceof Error && cause.name === 'AbortError') {
+      throw new Error('Richiesta a Google Drive scaduta dopo 30 secondi. Controlla la connessione e riprova.');
+    }
+    throw cause;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function signInWithGoogle(clientId: string): Promise<GoogleSession> {
@@ -92,30 +103,62 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   const existing = Array.isArray(listed?.files) ? listed.files.find((file: any) => file.name === APP_DATA_FILENAME) : undefined;
   let remote: AndrosSyncSnapshot | null = null;
   if (existing?.id) {
+    let downloaded: any;
     try {
-      const downloaded = await request(`${DRIVE_FILES}/${encodeURIComponent(existing.id)}?alt=media`, token);
-      const parsed = typeof downloaded === 'string' ? JSON.parse(downloaded) : downloaded;
-      if (parsed?.schema === 1) remote = parsed as AndrosSyncSnapshot;
-    } catch {
-      // A malformed remote backup is never allowed to replace local data.
+      downloaded = await request(`${DRIVE_FILES}/${encodeURIComponent(existing.id)}?alt=media`, token);
+    } catch (cause) {
+      const detail = cause instanceof Error ? cause.message : 'errore sconosciuto';
+      throw new Error(`Non riesco a leggere il backup esistente su Google Drive (${detail}). Per sicurezza non ho sovrascritto il file remoto.`);
     }
+
+    let parsed: any;
+    try {
+      parsed = typeof downloaded === 'string' ? JSON.parse(downloaded) : downloaded;
+    } catch {
+      throw new Error('Il backup presente su Google Drive non è JSON valido. Per evitare perdite di dati, la sincronizzazione è stata interrotta senza sovrascriverlo.');
+    }
+    if (!parsed || parsed.schema !== 1 || !Array.isArray(parsed.archive) || !Array.isArray(parsed.rules)) {
+      throw new Error('Il backup su Google Drive ha una struttura non riconosciuta. Per sicurezza non è stato sovrascritto.');
+    }
+    remote = parsed as AndrosSyncSnapshot;
   }
 
-  const mergeById = (left: unknown[], right: unknown[]): unknown[] => {
+  const itemTimestamp = (value: Record<string, unknown>): number | null => {
+    for (const key of ['updatedAt', 'importedAt', 'createdAt', 'timestamp']) {
+      const candidate = value[key];
+      if (typeof candidate === 'number' && Number.isFinite(candidate)) return candidate;
+    }
+    return null;
+  };
+
+  const mergeById = (localItems: unknown[], remoteItems: unknown[]): unknown[] => {
     const map = new Map<string, unknown>();
-    for (const value of [...left, ...right]) {
+    // Seed with remote data, then reconcile local records. When timestamps exist,
+    // retain the newest record; on ties or missing timestamps, prefer local data.
+    for (const value of [...remoteItems, ...localItems]) {
       if (!value || typeof value !== 'object') continue;
       const item = value as Record<string, unknown>;
-      if (typeof item.id !== 'string') continue;
-      map.set(item.id, value);
+      if (typeof item.id !== 'string' || !item.id.trim()) continue;
+      const previous = map.get(item.id);
+      if (!previous) {
+        map.set(item.id, value);
+        continue;
+      }
+      const previousTimestamp = itemTimestamp(previous as Record<string, unknown>);
+      const candidateTimestamp = itemTimestamp(item);
+      if (previousTimestamp !== null && candidateTimestamp !== null) {
+        if (candidateTimestamp >= previousTimestamp) map.set(item.id, value);
+      } else {
+        map.set(item.id, value);
+      }
     }
     return [...map.values()];
   };
   const merged: AndrosSyncSnapshot = {
     schema: 1,
     updatedAt: Date.now(),
-    archive: mergeById(local.archive, Array.isArray(remote?.archive) ? remote.archive : []),
-    rules: mergeById(local.rules, Array.isArray(remote?.rules) ? remote.rules : []),
+    archive: mergeById(local.archive, remote?.archive ?? []),
+    rules: mergeById(local.rules, remote?.rules ?? []),
   };
   const body = JSON.stringify(merged);
   if (existing?.id) {
