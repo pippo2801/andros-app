@@ -40,7 +40,6 @@ function validateEntry(key: BackupKey, raw: string | null): void {
     if (!isRecord(value) || !Array.isArray(value.sessions) || typeof value.activeId !== 'string') {
       throw new Error('La cronologia delle chat nel backup non è valida.');
     }
-    if (value.sessions.length > 300) throw new Error('Il backup contiene più di 300 conversazioni.');
     const ids = new Set<string>();
     let pinned = 0;
     for (const item of value.sessions) {
@@ -70,8 +69,8 @@ function validateEntry(key: BackupKey, raw: string | null): void {
       throw new Error('Le bozze nel backup non sono valide.');
     }
   } else if (key === 'andros.memory.rules.v1') {
-    if (!Array.isArray(value) || value.length > 100 || !value.every((rule) => isRecord(rule) &&
-      typeof rule.id === 'string' && typeof rule.text === 'string' && rule.text.length <= 2000 &&
+    if (!Array.isArray(value) || !value.every((rule) => isRecord(rule) &&
+      typeof rule.id === 'string' && typeof rule.text === 'string' &&
       typeof rule.createdAt === 'number' && Number.isFinite(rule.createdAt))) {
       throw new Error('Le regole di memoria nel backup non sono valide.');
     }
