@@ -46,6 +46,25 @@ export function saveOllamaConfig(config: OllamaConfig): OllamaConfig {
   return normalized;
 }
 
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Richiesta scaduta dopo ${Math.round(timeoutMs / 1000)} secondi.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function getJson(url: string): Promise<any> {
   if (Capacitor.isNativePlatform()) {
     const response = await CapacitorHttp.get({
@@ -59,7 +78,7 @@ async function getJson(url: string): Promise<any> {
     return response.data;
   }
 
-  const response = await fetch(url);
+  const response = await fetchWithTimeout(url, { method: 'GET' }, 12000);
   if (!response.ok) throw new Error(`Il server ha risposto con HTTP ${response.status}.`);
   return response.json();
 }
@@ -79,11 +98,11 @@ async function postJson(url: string, data: unknown): Promise<any> {
     return response.data;
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  });
+  }, 120000);
   if (!response.ok) throw new Error(`Il server ha risposto con HTTP ${response.status}.`);
   return response.json();
 }
