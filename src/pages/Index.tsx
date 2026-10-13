@@ -231,6 +231,31 @@ export default function Index() {
     }
   };
 
+  const handleChooseImages = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.currentTarget.files || []);
+    event.currentTarget.value = '';
+    if (!files.length) return;
+    if (pendingImages.length + files.length > 4) {
+      setNotice('Puoi allegare al massimo 4 immagini per messaggio.');
+      return;
+    }
+    if (files.some((file) => file.size > 5 * 1024 * 1024)) {
+      setNotice('Ogni immagine deve essere inferiore a 5 MB.');
+      return;
+    }
+    if (files.some((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type))) {
+      setNotice('Formato non supportato: usa JPG, PNG o WebP.');
+      return;
+    }
+    try {
+      const images = await Promise.all(files.map(readImageFile));
+      setPendingImages((current) => [...current, ...images].slice(0, 4));
+      setNotice('Le immagini saranno inviate al modello ma non conservate nella cronologia.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Impossibile allegare le immagini.');
+    }
+  };
+
   const handleSend = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const promptText = input.trim();
@@ -460,7 +485,7 @@ export default function Index() {
             </div>
           )}
           <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-cyan-400/30">
-            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={(event) => void handleChooseImages(event)} />
+            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(event) => void handleChooseImages(event)} />
             <button type="button" onClick={() => imageInputRef.current?.click()} disabled={loading || pendingImages.length >= 4} aria-label="Allega immagini" title="Allega immagini (max 4, 5 MB ciascuna)" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 text-slate-300 transition hover:bg-white/10 disabled:opacity-40"><ImagePlus size={18} /></button>
             <textarea
               value={input}
