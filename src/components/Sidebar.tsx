@@ -26,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   if (!isOpen) return null;
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const matchesQuery = (session: ChatSession) => !normalizedQuery || session.title.toLocaleLowerCase().includes(normalizedQuery);
@@ -109,7 +110,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <div className="border-t border-white/[0.08] p-3">
-          <button type="button" onClick={onClearHistory} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-300"><Trash2 size={16} /><span>Azzera conversazione corrente</span></button>
+          {confirmClearHistory ? (
+            <div className="space-y-2 rounded-xl border border-rose-400/20 bg-rose-400/[0.05] p-3">
+              <p className="text-xs leading-5 text-rose-200">Rimuovere tutti i messaggi dalla conversazione corrente?</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { onClearHistory(); setConfirmClearHistory(false); }} className="flex-1 rounded-lg bg-rose-500/15 px-2 py-2 text-xs font-medium text-rose-200 hover:bg-rose-500/25">Conferma</button>
+                <button type="button" onClick={() => setConfirmClearHistory(false)} className="flex-1 rounded-lg border border-white/10 px-2 py-2 text-xs text-slate-300 hover:bg-white/5">Annulla</button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setConfirmClearHistory(true)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-300"><Trash2 size={16} /><span>Azzera conversazione corrente</span></button>
+          )}
           <p className="px-3 pb-1 pt-2 text-[10px] text-slate-600">ANDROS OS · build in sviluppo</p>
         </div>
       </aside>
