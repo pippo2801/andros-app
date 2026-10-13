@@ -32,11 +32,11 @@ function isMessage(value: unknown): value is ChatMessageData {
 function validSession(value: unknown): value is ChatSession {
   if (!value || typeof value !== 'object') return false;
   const item = value as Record<string, unknown>;
-  return typeof item.id === 'string' &&
+  return typeof item.id === 'string' && item.id.trim().length > 0 &&
     typeof item.title === 'string' &&
     Array.isArray(item.messages) && item.messages.every(isMessage) &&
-    typeof item.createdAt === 'number' &&
-    typeof item.updatedAt === 'number' &&
+    typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) &&
+    typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) &&
     typeof item.pinned === 'boolean';
 }
 
@@ -65,9 +65,31 @@ export function loadChatSessionState(): ChatSessionState {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<ChatSessionState>;
       if (Array.isArray(parsed.sessions)) {
-        const sessions = parsed.sessions.filter(validSession)
-          .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
-          .map((session, index) => ({ ...session, pinned: index < MAX_PINNED_CHATS && session.pinned }));
+        // Salvage valid records without allowing duplicate IDs to make actions affect
+        // multiple chats. Keep the most recently updated copy of a duplicate ID.
+        const seenIds = new Set<string>();
+        const sessions = parsed.sessions
+          .filter(validSession)
+          .sort((a, b) => b.updatedAt - a.updatedAt)
+          .filter((session) => {
+            if (seenIds.has(session.id)) return false;
+            seenIds.add(session.id);
+            return true;
+          })
+          .map((session) => ({
+            ...session,
+            title: session.title.trim().slice(0, 80) || makeChatTitle(session.messages),
+          }))
+          .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+
+        // Keep every valid conversation, but cap pinned chats at the documented limit.
+        let pinnedCount = 0;
+        for (const session of sessions) {
+          if (!session.pinned) continue;
+          if (pinnedCount >= MAX_PINNED_CHATS) session.pinned = false;
+          else pinnedCount += 1;
+        }
+        sessions.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
         if (sessions.length) {
           const activeId = sessions.some((session) => session.id === parsed.activeId)
             ? parsed.activeId as string
