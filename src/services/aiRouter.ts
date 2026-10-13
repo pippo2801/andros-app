@@ -1,3 +1,8 @@
+/** True only for Ollama model names known to accept image input. */
+export function isVisionModel(model: string): boolean {
+  return /llava|qwen.*vl|vision|minicpm.*v/i.test(model);
+}
+
 export interface RouteDecision {
   model: string;
   reason: string;
