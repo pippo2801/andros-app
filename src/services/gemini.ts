@@ -42,7 +42,7 @@ export async function sendToGemini(
   approvedRules: string[] = [],
 ): Promise<string> {
   const key = apiKey.trim();
-  if (!key) throw new Error('Configura una chiave Gemini API gratuita in Google AI Studio oppure usa Ollama.');
+  if (!key) throw new Error('Gemini richiede una chiave API configurata nelle impostazioni. Puoi scegliere un altro provider disponibile oppure aprire Gemini Web.');
   const contents = messages
     .filter((message, index) => index > 0 || message.role !== 'assistant')
     .reduce<Array<{ role: 'user' | 'model'; parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> }>>((items, message) => {
@@ -86,6 +86,6 @@ export async function sendToGemini(
     return text;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`Gemini API non disponibile: ${detail}. Puoi riprovare oppure disattivare Gemini e usare Ollama.`);
+    throw new Error(`Gemini API non disponibile: ${detail}. Puoi riprovare oppure selezionare un altro provider configurato.`);
   }
 }
