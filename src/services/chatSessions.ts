@@ -3,6 +3,7 @@ import type { ChatMessageData } from './ollama';
 export const CHAT_SESSIONS_KEY = 'andros.chat.sessions.v1';
 export const LEGACY_HISTORY_KEY = 'andros.chat.history.v1';
 export const MAX_PINNED_CHATS = 30;
+const MAX_CHAT_TITLE_LENGTH = 80;
 
 export interface ChatSession {
   id: string;
@@ -26,17 +27,18 @@ const WELCOME_MESSAGE: ChatMessageData = {
 function isMessage(value: unknown): value is ChatMessageData {
   if (!value || typeof value !== 'object') return false;
   const item = value as Record<string, unknown>;
-  return (item.role === 'user' || item.role === 'assistant') && typeof item.content === 'string';
+  return (item.role === 'user' || item.role === 'assistant') &&
+    typeof item.content === 'string';
 }
 
 function validSession(value: unknown): value is ChatSession {
   if (!value || typeof value !== 'object') return false;
   const item = value as Record<string, unknown>;
-  return typeof item.id === 'string' &&
-    typeof item.title === 'string' &&
+  return typeof item.id === 'string' && item.id.trim().length > 0 &&
+    typeof item.title === 'string' && item.title.trim().length > 0 &&
     Array.isArray(item.messages) && item.messages.every(isMessage) &&
-    typeof item.createdAt === 'number' &&
-    typeof item.updatedAt === 'number' &&
+    typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) &&
+    typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) &&
     typeof item.pinned === 'boolean';
 }
 
@@ -65,9 +67,21 @@ export function loadChatSessionState(): ChatSessionState {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<ChatSessionState>;
       if (Array.isArray(parsed.sessions)) {
+        const seenIds = new Set<string>();
         const sessions = parsed.sessions.filter(validSession)
           .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
-          .map((session, index) => ({ ...session, pinned: index < MAX_PINNED_CHATS && session.pinned }));
+          .filter((session) => {
+            if (seenIds.has(session.id)) return false;
+            seenIds.add(session.id);
+            return true;
+          })
+          .map((session, index) => ({
+            ...session,
+            id: session.id.trim(),
+            title: session.title.trim().slice(0, MAX_CHAT_TITLE_LENGTH),
+            pinned: index < MAX_PINNED_CHATS && session.pinned,
+            messages: session.messages.map((message) => ({ role: message.role, content: message.content })),
+          }));
         if (sessions.length) {
           const activeId = sessions.some((session) => session.id === parsed.activeId)
             ? parsed.activeId as string
@@ -100,8 +114,15 @@ export function loadChatSessionState(): ChatSessionState {
 
 export function saveChatSessionState(state: ChatSessionState): void {
   const sessions = state.sessions
+    .filter(validSession)
     .slice()
-    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
+    .map((session, index) => ({
+      ...session,
+      title: session.title.trim().slice(0, MAX_CHAT_TITLE_LENGTH),
+      pinned: index < MAX_PINNED_CHATS && session.pinned,
+      messages: session.messages.map((message) => ({ role: message.role, content: message.content })),
+    }));
   localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify({ activeId: state.activeId, sessions }));
 }
 
