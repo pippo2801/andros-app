@@ -118,7 +118,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
       <section role="dialog" aria-modal="true" aria-labelledby="archive-title" className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-[#0b1120] shadow-2xl sm:rounded-3xl">
         <header className="flex items-start justify-between gap-4 border-b border-white/[0.08] p-5 sm:p-6">
           <div>
-            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200"><Archive size={20} /></div>
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-yellow-400/20 bg-yellow-400/10 text-yellow-200"><Archive size={20} /></div>
             <h2 id="archive-title" className="text-lg font-semibold text-white">Archivio universale delle chat</h2>
             <p className="mt-1 max-w-xl text-sm leading-5 text-slate-400">Importa esportazioni delle conversazioni e cerca nei loro contenuti. I dati restano in locale su questo dispositivo.</p>
           </div>
@@ -127,13 +127,13 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
 
         <div className="space-y-3 border-b border-white/[0.08] p-4 sm:p-5">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white hover:brightness-110"><Upload size={16} /> Importa chat</button>
-            <button type="button" onClick={saveCurrentConversation} className="flex items-center justify-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-3 text-sm font-medium text-cyan-100 hover:bg-cyan-400/[0.12]"><MessageSquareText size={16} /> Salva chat corrente</button>
+            <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 px-3 py-3 text-sm font-semibold text-white hover:brightness-110"><Upload size={16} /> Importa chat</button>
+            <button type="button" onClick={saveCurrentConversation} className="flex items-center justify-center gap-2 rounded-xl border border-yellow-400/20 bg-yellow-400/[0.07] px-3 py-3 text-sm font-medium text-yellow-100 hover:bg-yellow-400/[0.12]"><MessageSquareText size={16} /> Salva chat corrente</button>
             <button type="button" onClick={exportAll} disabled={!conversations.length} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-medium text-slate-200 hover:bg-white/10 disabled:opacity-40"><Download size={16} /> Esporta archivio</button>
           </div>
           <input ref={fileRef} type="file" accept=".zip,.json,.txt,.md,.html,.htm,.csv,application/zip,application/json,text/plain,text/html" multiple className="hidden" onChange={(event) => void importFiles(event.target.files)} />
           <p className="text-[11px] leading-4 text-slate-500">Formati: ZIP (max 100 MB), JSON, TXT, MD, HTML e CSV (max 5 MB per file). Puoi caricare direttamente lo ZIP di ChatGPT; per Gemini, esporta i dati con Google Takeout. I formati variano in base al servizio.</p>
-          <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 focus-within:border-cyan-400/40">
+          <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 focus-within:border-yellow-400/40">
             <Search size={17} className="shrink-0 text-slate-500" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cerca codice, progetto, argomento…" aria-label="Cerca nell’archivio" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500" />
             {query && <button type="button" aria-label="Cancella ricerca" onClick={() => setQuery('')} className="text-slate-500 hover:text-white"><X size={14} /></button>}
@@ -148,7 +148,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
             results.length ? <ul className="space-y-2">{results.map(({ conversation, message }, index) => (
               <li key={`${conversation.id}-${index}`} className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
                 <button type="button" onClick={() => openResult(conversation.title, conversation.messages)} className="block w-full text-left">
-                  <span className="flex items-center gap-2 text-xs font-semibold text-cyan-200"><MessageSquareText size={14} />{conversation.title}</span>
+                  <span className="flex items-center gap-2 text-xs font-semibold text-yellow-200"><MessageSquareText size={14} />{conversation.title}</span>
                   <span className="mt-2 line-clamp-4 block whitespace-pre-wrap break-words text-xs leading-5 text-slate-300">{message.content}</span>
                   <span className="mt-2 block text-[10px] text-slate-500">{message.role === 'user' ? 'Domanda' : 'Risposta'} · {conversation.source}</span>
                 </button>

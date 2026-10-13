@@ -16,4 +16,4 @@ html, body, #root { width: 100%; min-height: 100%; margin: 0; }
 body { min-width: 320px; min-height: 100vh; min-height: 100dvh; }
 button, input, textarea { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
-::selection { background: rgba(59, 130, 246, .35); }
+::selection { background: rgba(251, 191, 36, .35); }
