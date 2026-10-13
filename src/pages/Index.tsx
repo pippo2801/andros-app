@@ -395,14 +395,20 @@ export default function Index() {
             </div>
           )}
           <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-cyan-400/30">
-            <input
-              type="text"
+            <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Scrivi ad Andros…"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder="Scrivi ad Andros… (Ctrl+Invio per inviare)"
               aria-label="Messaggio per Andros"
               autoComplete="off"
-              className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+              rows={2}
+              className="max-h-48 min-w-0 flex-1 resize-y bg-transparent px-3 py-3 text-sm leading-5 text-slate-100 outline-none placeholder:text-slate-500"
             />
             <button
               type="submit"
