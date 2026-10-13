@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Archive, Search, Upload, Download, Trash2, X, MessageSquareText, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import {
   exportArchivedConversations,
+  MAX_ARCHIVED_CONVERSATIONS,
   loadArchivedConversations,
   parseArchiveUpload,
   saveArchivedConversations,
@@ -28,8 +29,10 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
   const results = useMemo(() => searchArchivedConversations(conversations, query), [conversations, query]);
 
   const persist = (next: ArchivedConversation[]) => {
-    saveArchivedConversations(next);
-    setConversations(next);
+    const bounded = next.slice(-MAX_ARCHIVED_CONVERSATIONS);
+    saveArchivedConversations(bounded);
+    setConversations(bounded);
+    return bounded;
   };
 
   const saveCurrentConversation = () => {
@@ -72,8 +75,11 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
         next = [...next, ...parsed];
         imported += parsed.length;
       }
-      persist(next);
-      setStatus(imported ? `Importate ${imported} conversazioni. Ora puoi cercarle per parole chiave.` : 'Non ho trovato conversazioni riconoscibili nei file selezionati.');
+      const saved = persist(next);
+      const retentionNote = next.length > MAX_ARCHIVED_CONVERSATIONS
+        ? ` L’archivio conserva al massimo ${MAX_ARCHIVED_CONVERSATIONS} conversazioni: vengono mantenute le più recenti.`
+        : '';
+      setStatus(imported ? `Importate ${imported} conversazioni. Archivio: ${saved.length}/${MAX_ARCHIVED_CONVERSATIONS}.${retentionNote} Ora puoi cercarle per parole chiave.` : 'Non ho trovato conversazioni riconoscibili nei file selezionati.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Importazione non riuscita.');
     } finally {

@@ -14,7 +14,7 @@ export interface ArchivedConversation {
 }
 
 const STORAGE_KEY = 'andros.archive.conversations.v1';
-const MAX_CONVERSATIONS = 300;
+export const MAX_ARCHIVED_CONVERSATIONS = 300;
 const MAX_MESSAGE_LENGTH = 40_000;
 
 function textFromContent(value: unknown): string {
@@ -240,7 +240,7 @@ export function loadArchivedConversations(): ArchivedConversation[] {
 }
 
 export function saveArchivedConversations(conversations: ArchivedConversation[]): void {
-  const bounded = conversations.slice(-MAX_CONVERSATIONS);
+  const bounded = conversations.slice(-MAX_ARCHIVED_CONVERSATIONS);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(bounded));
   } catch {
