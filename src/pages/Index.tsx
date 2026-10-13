@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Browser } from '@capacitor/browser';
 import {
   AlertCircle, BookOpen, Bot, CheckCircle2, Cloud, Cpu, Menu, Plus, Send, Settings2,
-  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
+  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus, Download,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
@@ -231,6 +231,28 @@ export default function Index() {
     }
   };
 
+  const handleExportCurrentChat = () => {
+    try {
+      const session = sessions.find((item) => item.id === activeChatId);
+      const title = (session?.title || 'Conversazione Andros').trim();
+      const markdown = '# ' + title + '\n\n' + messages.map((message) =>
+        (message.role === 'user' ? '## Tu' : '## Andros') + '\n\n' + message.content,
+      ).join('\n\n---\n\n');
+      const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'andros-chat-' + new Date().toISOString().slice(0, 10) + '.md';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setNotice('Conversazione esportata in Markdown.');
+    } catch {
+      setNotice('Impossibile esportare questa conversazione.');
+    }
+  };
+
   const handleSend = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const text = input.trim();
@@ -372,6 +394,15 @@ export default function Index() {
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/10"
           >
             <MessageSquarePlus size={18} />
+          </button>
+          <button
+            type="button"
+            aria-label="Esporta conversazione"
+            title="Esporta conversazione in Markdown"
+            onClick={handleExportCurrentChat}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/10"
+          >
+            <Download size={18} />
           </button>
           <button
             type="button"
