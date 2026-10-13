@@ -282,7 +282,7 @@ export default function Index() {
           // The request below will show the connection error with actionable guidance.
         }
       }
-      const route = chooseModelForTask(imagesForRequest.length ? text + ' immagini' : text, models, config.model);
+      const route = chooseModelForTask(text, models, config.model, imagesForRequest.length > 0);
       const geminiKey = getGeminiApiKey();
       const wantsGemini = aiMode === 'gemini' || (aiMode === 'auto' && Boolean(geminiKey) && (imagesForRequest.length > 0 || (route.category !== 'coding' && route.category !== 'vision')));
       if (imagesForRequest.length > 0 && !wantsGemini && !models.some((model) => /llava|qwen.*vl|vision|minicpm.*v/i.test(model))) {
