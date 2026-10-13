@@ -57,7 +57,7 @@ function loadMemoryRules(): MemoryRule[] {
 }
 const WELCOME: ChatMessageData = {
   role: 'assistant',
-  content: 'Ciao! Sono Andros, il tuo assistente personale. Posso aiutarti a ragionare, scrivere, programmare e lavorare sui tuoi progetti. Per rispondere uso il modello Ollama configurato nelle impostazioni.',
+  content: 'Ciao! Sono Andros, il tuo assistente personale. Posso aiutarti a ragionare, scrivere, programmare e lavorare sui tuoi progetti. Per rispondere uso il motore AI selezionato nelle impostazioni.',
 };
 
 type ConnectionState = 'unknown' | 'checking' | 'online' | 'offline';
