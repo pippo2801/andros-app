@@ -194,7 +194,7 @@ export default function Index() {
       const startingText = input.trim();
       recognition.onresult = (event) => {
         const chunks: string[] = [];
-        for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        for (let index = 0; index < event.results.length; index += 1) {
           const result = event.results[index];
           if (result?.[0]?.transcript) chunks.push(result[0].transcript);
         }
