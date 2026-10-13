@@ -47,11 +47,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const renderSession = (session: ChatSession) => (
-    <div key={session.id} className={`group flex items-center gap-1 rounded-xl border px-2 py-1.5 transition ${session.id === activeChatId ? 'border-cyan-400/25 bg-cyan-400/[0.08]' : 'border-transparent hover:border-white/[0.08] hover:bg-white/[0.04]'}`}>
+    <div key={session.id} className={`group flex items-center gap-1 rounded-xl border px-2 py-1.5 transition ${session.id === activeChatId ? 'border-yellow-400/25 bg-yellow-400/[0.08]' : 'border-transparent hover:border-white/[0.08] hover:bg-white/[0.04]'}`}>
       <div className="min-w-0 flex-1 py-1">
         {editingId === session.id ? (
           <form onSubmit={(event) => { event.preventDefault(); saveRename(session.id); }} className="flex items-center gap-1">
-            <input autoFocus value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} maxLength={80} aria-label="Nuovo titolo" className="min-w-0 flex-1 rounded-md border border-cyan-400/30 bg-slate-950 px-2 py-1 text-xs text-white outline-none" />
+            <input autoFocus value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} maxLength={80} aria-label="Nuovo titolo" className="min-w-0 flex-1 rounded-md border border-yellow-400/30 bg-slate-950 px-2 py-1 text-xs text-white outline-none" />
             <button type="submit" aria-label="Salva titolo" className="rounded-md p-1 text-emerald-300 hover:bg-emerald-400/10"><Check size={14} /></button>
           </form>
         ) : (
@@ -61,8 +61,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         )}
       </div>
-      <button type="button" aria-label="Rinomina conversazione" title="Rinomina conversazione" onClick={() => beginRename(session)} className="rounded-md p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-cyan-200"><Pencil size={14} /></button>
-      <button type="button" aria-label={session.pinned ? 'Rimuovi dai fissati' : 'Fissa conversazione'} title={session.pinned ? 'Rimuovi dai fissati' : 'Fissa conversazione'} onClick={() => onTogglePin(session.id)} className="rounded-md p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-cyan-200">
+      <button type="button" aria-label="Rinomina conversazione" title="Rinomina conversazione" onClick={() => beginRename(session)} className="rounded-md p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-yellow-200"><Pencil size={14} /></button>
+      <button type="button" aria-label={session.pinned ? 'Rimuovi dai fissati' : 'Fissa conversazione'} title={session.pinned ? 'Rimuovi dai fissati' : 'Fissa conversazione'} onClick={() => onTogglePin(session.id)} className="rounded-md p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-yellow-200">
         {session.pinned ? <PinOff size={14} /> : <Pin size={14} />}
       </button>
       {deleteConfirmId === session.id ? (
@@ -83,21 +83,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <aside className="relative z-10 flex h-full w-[min(21rem,90vw)] flex-col border-r border-white/10 bg-[#080d19] text-slate-200 shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/[0.08] p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200"><Bot size={22} /></div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-yellow-400/20 bg-yellow-400/10 text-yellow-200"><Bot size={22} /></div>
             <div><h1 className="text-sm font-bold tracking-[0.16em]">ANDROS OS</h1><p className="mt-0.5 text-xs text-slate-500">Assistente personale</p></div>
           </div>
           <button type="button" aria-label="Chiudi menu" onClick={onClose} className="rounded-lg p-2 text-slate-400 transition hover:bg-white/10 hover:text-white"><X size={19} /></button>
         </div>
 
         <div className="space-y-2 p-3">
-          <button type="button" onClick={onNewChat} className="flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-950/30 transition hover:brightness-110"><MessageSquarePlus size={18} /><span>Nuova conversazione</span></button>
-          <button type="button" onClick={onOpenSettings} className="flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-slate-300 transition hover:bg-white/[0.07]"><Settings2 size={18} className="text-cyan-300" /><span>Connessione e modello</span></button>
-          <button type="button" onClick={onOpenArchive} className="flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-slate-300 transition hover:bg-white/[0.07]"><Archive size={18} className="text-cyan-300" /><span>Archivio universale delle chat</span></button>
-          <button type="button" onClick={onOpenMemory} className="flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-slate-300 transition hover:bg-white/[0.07]"><BookOpen size={18} className="text-cyan-300" /><span>Memoria e regole permanenti</span></button>
+          <button type="button" onClick={onNewChat} className="flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 px-3 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-950/30 transition hover:brightness-110"><MessageSquarePlus size={18} /><span>Nuova conversazione</span></button>
+          <button type="button" onClick={onOpenSettings} className="flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-slate-300 transition hover:bg-white/[0.07]"><Settings2 size={18} className="text-yellow-300" /><span>Connessione e modello</span></button>
+          <button type="button" onClick={onOpenArchive} className="flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-slate-300 transition hover:bg-white/[0.07]"><Archive size={18} className="text-yellow-300" /><span>Archivio universale delle chat</span></button>
+          <button type="button" onClick={onOpenMemory} className="flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-slate-300 transition hover:bg-white/[0.07]"><BookOpen size={18} className="text-yellow-300" /><span>Memoria e regole permanenti</span></button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-          <label className="mb-4 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-slate-950/70 px-3 py-2.5 text-slate-500 focus-within:border-cyan-400/30">
+          <label className="mb-4 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-slate-950/70 px-3 py-2.5 text-slate-500 focus-within:border-yellow-400/30">
             <Search size={15} />
             <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Cerca conversazioni…" aria-label="Cerca conversazioni" className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-slate-600" />
             {searchQuery && <button type="button" aria-label="Cancella ricerca" onClick={() => setSearchQuery('')} className="text-slate-500 hover:text-white"><X size={13} /></button>}
