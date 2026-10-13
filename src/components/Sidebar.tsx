@@ -29,7 +29,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   if (!isOpen) return null;
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
-  const matchesQuery = (session: ChatSession) => !normalizedQuery || session.title.toLocaleLowerCase().includes(normalizedQuery);
+  const matchesQuery = (session: ChatSession) => !normalizedQuery ||
+    session.title.toLocaleLowerCase().includes(normalizedQuery) ||
+    session.messages.some((message) => message.content.toLocaleLowerCase().includes(normalizedQuery));
   const pinned = sessions.filter((session) => session.pinned && matchesQuery(session));
   const recent = sessions.filter((session) => !session.pinned && matchesQuery(session));
   const beginRename = (session: ChatSession) => {
@@ -99,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           <label className="mb-4 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-slate-950/70 px-3 py-2.5 text-slate-500 focus-within:border-cyan-400/30">
             <Search size={15} />
-            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Cerca conversazioni…" aria-label="Cerca conversazioni" className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-slate-600" />
+            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Cerca in tutte le chat…" aria-label="Cerca conversazioni" className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-slate-600" />
             {searchQuery && <button type="button" aria-label="Cancella ricerca" onClick={() => setSearchQuery('')} className="text-slate-500 hover:text-white"><X size={13} /></button>}
           </label>
           <div className="mb-2 flex items-center justify-between px-1"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Fissate</span><span className="text-[10px] text-slate-600">{sessions.filter((session) => session.pinned).length}/30</span></div>
