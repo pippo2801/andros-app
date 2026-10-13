@@ -322,6 +322,8 @@ export default function Index() {
       setNotice(`Router automatico · ${providerLabel} · ${route.reason}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
+      // Keep temporary image attachments available for retry after a provider/network failure.
+      if (imagesForRequest.length > 0) setPendingImages(imagesForRequest);
       setSessions((current) => updateChatSession(current, chatIdAtSend, [...updatedMessages, {
         role: 'assistant',
         content: `Non sono riuscito a completare la richiesta.\n\n${message}\n\n${aiMode === 'gemini' || (aiMode === 'auto' && Boolean(getGeminiApiKey())) ? 'Controlla la chiave API e la disponibilità di Gemini.' : 'Controlla l’indirizzo di Ollama e verifica che il modello scelto sia installato.'}`,
