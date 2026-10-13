@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Browser } from '@capacitor/browser';
 import {
   AlertCircle, BookOpen, Bot, CheckCircle2, Cloud, Cpu, Menu, Plus, Send, Settings2,
-  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
+  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus, Search, Search,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
@@ -61,6 +61,7 @@ const WELCOME: ChatMessageData = {
 };
 
 type ConnectionState = 'unknown' | 'checking' | 'online' | 'offline';
+interface WebResult { title: string; snippet: string; url: string }
 
 export default function Index() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -91,6 +92,8 @@ export default function Index() {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [settingsError, setSettingsError] = useState('');
   const [notice, setNotice] = useState('');
+  const [webResults, setWebResults] = useState<WebResult[]>([]);
+  const [webSearchLoading, setWebSearchLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -228,6 +231,45 @@ export default function Index() {
       setNotice('Impostazioni salvate su questo dispositivo.');
     } catch (error) {
       setSettingsError(error instanceof Error ? error.message : 'Impossibile salvare le impostazioni.');
+    }
+  };
+
+  const handleWebSearch = async () => {
+    const query = input.trim();
+    if (!query) {
+      setNotice('Scrivi una domanda o delle parole chiave prima di cercare.');
+      return;
+    }
+    setWebSearchLoading(true);
+    setWebResults([]);
+    setNotice('');
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12000);
+    try {
+      const url = 'https://it.wikipedia.org/w/api.php?action=query&list=search&srsearch=' +
+        encodeURIComponent(query) + '&format=json&origin=*&srlimit=5&utf8=1';
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const data = await response.json();
+      const results: WebResult[] = (Array.isArray(data?.query?.search) ? data.query.search : [])
+        .filter((item: any) => typeof item?.title === 'string' && typeof item?.snippet === 'string')
+        .map((item: any) => {
+          const snippet = new DOMParser().parseFromString(item.snippet, 'text/html').body.textContent || '';
+          return {
+            title: item.title,
+            snippet: snippet.replace(/\s+/g, ' ').trim(),
+            url: 'https://it.wikipedia.org/wiki/' + encodeURIComponent(item.title.replace(/ /g, '_')),
+          };
+        });
+      setWebResults(results);
+      setNotice(results.length ? 'Risultati Wikipedia caricati. Controlla le fonti prima di usare le informazioni.' : 'Nessun risultato trovato su Wikipedia italiana.');
+    } catch (error) {
+      setNotice(error instanceof Error && error.name === 'AbortError'
+        ? 'La ricerca è scaduta. Controlla la connessione e riprova.'
+        : 'Ricerca Wikipedia non disponibile. Controlla la connessione e riprova.');
+    } finally {
+      window.clearTimeout(timeout);
+      setWebSearchLoading(false);
     }
   };
 
@@ -442,7 +484,29 @@ export default function Index() {
               <button type="button" aria-label="Chiudi avviso" onClick={() => setNotice('')} className="text-slate-500 hover:text-white"><X size={14} /></button>
             </div>
           )}
+          {webResults.length > 0 && (
+            <section className="mx-auto mb-3 max-h-56 max-w-3xl space-y-2 overflow-y-auto rounded-xl border border-amber-300/20 bg-slate-900/95 p-3" aria-label="Risultati ricerca web">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-amber-200">Ricerca Wikipedia · fonti esterne</span>
+                <button type="button" onClick={() => setWebResults([])} aria-label="Chiudi risultati" className="rounded p-1 text-slate-400 hover:bg-white/10"><X size={14} /></button>
+              </div>
+              {webResults.map((result) => (
+                <article key={result.url} className="border-t border-white/[0.07] pt-2">
+                  <button type="button" onClick={() => void Browser.open({ url: result.url })} className="text-left text-sm font-medium text-cyan-200 underline underline-offset-2">{result.title}</button>
+                  <p className="mt-1 text-xs leading-5 text-slate-300">{result.snippet}</p>
+                </article>
+              ))}
+              <button type="button" onClick={() => {
+                const context = webResults.map((result, index) => '[' + (index + 1) + '] ' + result.title + '\n' + result.snippet + '\nFonte: ' + result.url).join('\n\n');
+                setInput((current) => (current.trim() ? current.trim() + '\n\n' : '') + 'Usa criticamente questi risultati Wikipedia per rispondere alla mia domanda. Distingui i fatti dalle incertezze e cita i link.\n\n' + context);
+                setNotice('Risultati aggiunti al testo. Rivedili e premi Invio per chiedere una sintesi al modello.');
+              }} className="w-full rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-3 py-2 text-xs font-medium text-amber-100 hover:bg-amber-300/[0.12]">Usa i risultati come contesto per Andros</button>
+            </section>
+          )}
           <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-cyan-400/30">
+            <button type="button" onClick={() => void handleWebSearch()} disabled={webSearchLoading || !input.trim()} aria-label="Cerca su Wikipedia" title="Cerca sul web (Wikipedia)" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 text-slate-300 transition hover:bg-white/10 disabled:opacity-40">
+              {webSearchLoading ? <LoaderCircle size={18} className="animate-spin" /> : <Search size={18} />}
+            </button>
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
