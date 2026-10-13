@@ -75,7 +75,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
     window.speechSynthesis.cancel();
     const spokenText = content.replace(/```[\s\S]*?```/g, ' blocco di codice ');
     const utterance = new SpeechSynthesisUtterance(spokenText);
-    utterance.lang = document.documentElement.lang || 'it-IT';
+    const pageLanguage = document.documentElement.lang.toLowerCase();
+    utterance.lang = pageLanguage === 'it' ? 'it-IT' : pageLanguage === 'en' ? 'en-US' : pageLanguage || 'it-IT';
     utterance.onend = () => setSpeaking(false);
     utterance.onerror = () => setSpeaking(false);
     window.speechSynthesis.speak(utterance);
