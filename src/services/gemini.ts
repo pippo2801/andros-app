@@ -2,6 +2,22 @@ import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import type { ChatMessageData } from './ollama';
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_TIMEOUT_MS = 120000;
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Richiesta Gemini scaduta dopo 120 secondi.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 export function getGeminiApiKey(): string {
   try {
@@ -59,7 +75,7 @@ export async function sendToGemini(
       }
       result = response.data;
     } else {
-      const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const response = await fetchWithTimeout(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       result = await response.json();
       if (!response.ok) throw new Error(result?.error?.message || `HTTP ${response.status}`);
     }
