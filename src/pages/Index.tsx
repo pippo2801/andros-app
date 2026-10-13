@@ -510,8 +510,13 @@ export default function Index() {
             <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-2" aria-label="Immagini allegate">
               {pendingImages.map((image, index) => (
                 <div key={image.name + index} className="flex max-w-full items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.06] px-2 py-1.5 text-xs text-slate-200">
-                  <span className="max-w-[180px] truncate">{image.name}</span>
-                  <button type="button" aria-label={'Rimuovi ' + image.name} onClick={() => setPendingImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded p-1 text-slate-400 hover:bg-white/10 hover:text-white"><X size={13} /></button>
+                  <img
+                    src={`data:${image.mimeType};base64,${image.data}`}
+                    alt={`Anteprima di ${image.name}`}
+                    className="h-10 w-10 shrink-0 rounded-md border border-white/10 object-cover"
+                  />
+                  <span className="max-w-[180px] truncate" title={image.name}>{image.name}</span>
+                  <button type="button" aria-label={'Rimuovi ' + image.name} title="Rimuovi immagine" onClick={() => setPendingImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded p-1 text-slate-400 hover:bg-white/10 hover:text-white"><X size={13} /></button>
                 </div>
               ))}
             </div>
