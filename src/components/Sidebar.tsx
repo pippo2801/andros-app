@@ -36,7 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (!normalizedQuery) return '';
     const match = session.messages.find((message) => message.content.toLocaleLowerCase().includes(normalizedQuery));
     if (!match) return '';
-    const text = match.content.replace(/\\s+/g, ' ').trim();
+    const text = match.content.replace(/\s+/g, ' ').trim();
     const index = text.toLocaleLowerCase().indexOf(normalizedQuery);
     const start = Math.max(0, index - 24);
     const end = Math.min(text.length, index + normalizedQuery.length + 56);
