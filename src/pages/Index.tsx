@@ -350,8 +350,9 @@ export default function Index() {
           >
             <Menu size={19} />
           </button>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-yellow-400/25 bg-gradient-to-br from-amber-500/20 to-yellow-400/10 text-yellow-300 shadow-lg shadow-yellow-950/30">
-            <Bot size={22} />
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-yellow-300/50 bg-gradient-to-br from-amber-300/25 via-amber-500/15 to-yellow-300/10 text-yellow-200 shadow-[0_0_22px_rgba(251,191,36,0.18)] motion-safe:animate-pulse" role="img" aria-label="Orb di Andros">
+            <span className="absolute inset-[-4px] rounded-full border border-yellow-300/15" aria-hidden="true" />
+            <Bot size={21} />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -404,7 +405,8 @@ export default function Index() {
         <div className="flex-1 overflow-y-auto px-3 py-5 sm:px-6 sm:py-7">
           {messages.length === 1 && messages[0]?.role === 'assistant' && (
             <div className="mx-auto mb-7 mt-2 max-w-2xl text-center sm:mt-8">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-300/20 bg-gradient-to-br from-amber-500/20 to-yellow-400/10 text-yellow-200 shadow-2xl shadow-yellow-950/30">
+              <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-yellow-300/35 bg-gradient-to-br from-amber-300/20 via-amber-500/10 to-yellow-200/10 text-yellow-100 shadow-[0_0_36px_rgba(251,191,36,0.16)] motion-safe:animate-pulse" role="img" aria-label="Orb luminoso di Andros">
+                <span className="absolute inset-[-6px] rounded-full border border-yellow-300/10" aria-hidden="true" />
                 <Sparkles size={28} />
               </div>
               <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Il tuo spazio, la tua intelligenza.</h1>
