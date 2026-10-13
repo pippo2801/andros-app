@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Browser } from '@capacitor/browser';
 import {
   AlertCircle, BookOpen, Bot, CheckCircle2, Cloud, Cpu, Menu, Plus, Send, Settings2,
-  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus,
+  Sparkles, Wifi, WifiOff, X, LoaderCircle, Trash2, MessageSquarePlus, Search,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatMessage } from '../components/ChatMessage';
@@ -228,6 +228,20 @@ export default function Index() {
       setNotice('Impostazioni salvate su questo dispositivo.');
     } catch (error) {
       setSettingsError(error instanceof Error ? error.message : 'Impossibile salvare le impostazioni.');
+    }
+  };
+
+  const handleWebSearch = async () => {
+    const query = input.trim();
+    if (!query) {
+      setNotice('Scrivi una domanda o delle parole chiave prima di cercare sul web.');
+      return;
+    }
+    try {
+      await Browser.open({ url: 'https://duckduckgo.com/?q=' + encodeURIComponent(query) });
+      setNotice('Ricerca web aperta nel browser. I risultati provengono dal motore di ricerca, non da Andros.');
+    } catch {
+      setNotice('Non riesco ad aprire il browser per la ricerca web.');
     }
   };
 
