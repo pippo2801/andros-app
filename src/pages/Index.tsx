@@ -442,7 +442,19 @@ export default function Index() {
               <button type="button" aria-label="Chiudi avviso" onClick={() => setNotice('')} className="text-slate-500 hover:text-white"><X size={14} /></button>
             </div>
           )}
+          {pendingImages.length > 0 && (
+            <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-2" aria-label="Immagini allegate">
+              {pendingImages.map((image, index) => (
+                <div key={image.name + index} className="flex max-w-full items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.06] px-2 py-1.5 text-xs text-slate-200">
+                  <span className="max-w-[180px] truncate">{image.name}</span>
+                  <button type="button" aria-label={'Rimuovi ' + image.name} onClick={() => setPendingImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded p-1 text-slate-400 hover:bg-white/10 hover:text-white"><X size={13} /></button>
+                </div>
+              ))}
+            </div>
+          )}
           <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 shadow-2xl shadow-black/20 focus-within:border-cyan-400/30">
+            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={(event) => void handleChooseImages(event)} />
+            <button type="button" onClick={() => imageInputRef.current?.click()} disabled={loading || pendingImages.length >= 4} aria-label="Allega immagini" title="Allega immagini (max 4, 5 MB ciascuna)" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 text-slate-300 transition hover:bg-white/10 disabled:opacity-40"><ImagePlus size={18} /></button>
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
@@ -460,7 +472,7 @@ export default function Index() {
             />
             <button
               type="submit"
-              disabled={loading || !input.trim()}
+              disabled={loading || (!input.trim() && pendingImages.length === 0)}
               aria-label="Invia messaggio"
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
