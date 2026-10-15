@@ -40,7 +40,11 @@ export function saveDeletedChatSessions(items: DeletedChatSession[]): void {
     const previous = latest.get(id);
     if (!previous || item.deletedAt > previous.deletedAt) latest.set(id, { id, deletedAt: item.deletedAt });
   }
-  localStorage.setItem(DELETED_CHAT_SESSIONS_KEY, JSON.stringify([...latest.values()]));
+  try {
+    localStorage.setItem(DELETED_CHAT_SESSIONS_KEY, JSON.stringify([...latest.values()]));
+  } catch {
+    throw new Error('Impossibile salvare il registro delle chat eliminate. Libera spazio nella memoria locale prima di sincronizzare.');
+  }
 }
 
 export function recordDeletedChatSession(id: string): void {
@@ -201,7 +205,11 @@ export function saveChatSessionState(state: ChatSessionState): void {
     .slice()
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
     .map((session, index) => ({ ...session, pinned: index < MAX_PINNED_CHATS && session.pinned }));
-  localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify({ activeId: state.activeId, sessions }));
+  try {
+    localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify({ activeId: state.activeId, sessions }));
+  } catch {
+    throw new Error('Impossibile salvare le conversazioni: la memoria locale potrebbe essere piena o non disponibile. Esporta un backup e libera spazio.');
+  }
 }
 
 export function updateChatSession(
