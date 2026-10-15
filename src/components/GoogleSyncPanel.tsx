@@ -2,13 +2,20 @@ import React, { useState } from 'react';
 import { Cloud, CloudDownload, CloudUpload, LogIn, LogOut, ShieldCheck, X, AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react';
 import { signInWithGoogle, syncAndrosSnapshot, type AndrosSyncSnapshot, type GoogleSession } from '../services/googleDriveSync';
 import { loadArchivedConversations, saveArchivedConversations } from '../services/conversationArchive';
+import { loadChatSessionState, saveChatSessionState, type ChatSession } from '../services/chatSessions';
 
 const CLIENT_KEY = 'andros.google.oauth-client-id.v1';
 const RULES_KEY = 'andros.memory.rules.v1';
 
+interface MemoryRule {
+  id: string;
+  text: string;
+  createdAt: number;
+}
+
 interface GoogleSyncPanelProps {
   onClose: () => void;
-  onSynced: (rules: Array<{ id: string; text: string; createdAt: number }>) => void;
+  onSynced: (data: { rules: MemoryRule[]; sessions: ChatSession[] }) => void;
 }
 
 export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSynced }) => {
@@ -28,7 +35,7 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
       localStorage.setItem(CLIENT_KEY, id);
       const result = await signInWithGoogle(id);
       setSession(result);
-      setStatus(`Accesso Google riuscito${result.email ? `: ${result.email}` : ''}. Puoi sincronizzare archivio e regole.`);
+      setStatus(`Accesso Google riuscito${result.email ? `: ${result.email}` : ''}. Puoi sincronizzare chat, archivio e regole.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Accesso Google non riuscito.');
     } finally { setBusy(false); }
@@ -45,12 +52,36 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
         const parsed = JSON.parse(localStorage.getItem(RULES_KEY) || '[]');
         if (Array.isArray(parsed)) rules = parsed;
       } catch { rules = []; }
-      const local: AndrosSyncSnapshot = { schema: 1, updatedAt: Date.now(), archive, rules };
+      const chatState = loadChatSessionState();
+      const local: AndrosSyncSnapshot = {
+        schema: 2,
+        updatedAt: Date.now(),
+        archive,
+        rules,
+        sessions: chatState.sessions,
+      };
       const merged = await syncAndrosSnapshot(session.accessToken, local);
       saveArchivedConversations(merged.archive as ReturnType<typeof loadArchivedConversations>);
-      localStorage.setItem(RULES_KEY, JSON.stringify(merged.rules));
-      onSynced(merged.rules as Array<{ id: string; text: string; createdAt: number }>);
-      setStatus(`Sincronizzazione completata: ${merged.archive.length} conversazioni e ${merged.rules.length} regole disponibili su Google Drive.`);
+      const validRules = merged.rules.filter((rule): rule is MemoryRule =>
+        Boolean(rule && typeof rule === 'object' &&
+          typeof (rule as MemoryRule).id === 'string' &&
+          typeof (rule as MemoryRule).text === 'string' &&
+          typeof (rule as MemoryRule).createdAt === 'number'));
+      localStorage.setItem(RULES_KEY, JSON.stringify(validRules));
+      const validSessions = merged.sessions.filter((item): item is ChatSession =>
+        Boolean(item && typeof item === 'object' &&
+          typeof (item as ChatSession).id === 'string' &&
+          typeof (item as ChatSession).title === 'string' &&
+          Array.isArray((item as ChatSession).messages) &&
+          typeof (item as ChatSession).createdAt === 'number' &&
+          typeof (item as ChatSession).updatedAt === 'number' &&
+          typeof (item as ChatSession).pinned === 'boolean'));
+      const activeId = validSessions.some((item) => item.id === chatState.activeId)
+        ? chatState.activeId
+        : validSessions[0]?.id || chatState.activeId;
+      saveChatSessionState({ activeId, sessions: validSessions });
+      onSynced({ rules: validRules, sessions: validSessions });
+      setStatus(`Sincronizzazione completata: ${validSessions.length} chat, ${merged.archive.length} conversazioni archiviate e ${validRules.length} regole disponibili su Google Drive.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Sincronizzazione non riuscita.');
     } finally { setBusy(false); }
@@ -81,7 +112,7 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
             <button type="button" disabled={busy || !session} onClick={() => void sync()} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-40">{busy ? <LoaderCircle size={16} className="animate-spin" /> : <CloudUpload size={16} />} Sincronizza</button>
           </div>
           <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
-            <div className="flex items-start gap-2"><CloudDownload size={15} className="mt-0.5 shrink-0 text-cyan-300" /><p className="text-[11px] leading-5 text-slate-400">La sincronizzazione unisce archivio conversazioni e regole permanenti per ID, evitando duplicati. Crea o aggiorna il file ANDROS OS nella tua area Drive; puoi vederlo ed eliminarlo. Il token resta in memoria e non viene salvato su disco.</p></div>
+            <div className="flex items-start gap-2"><CloudDownload size={15} className="mt-0.5 shrink-0 text-cyan-300" /><p className="text-[11px] leading-5 text-slate-400">La sincronizzazione unisce chat, archivio conversazioni e regole permanenti per ID, evitando duplicati. Le versioni precedenti del backup vengono lette e aggiornate al nuovo formato. Il token resta in memoria e non viene salvato su disco.</p></div>
           </div>
         </div>
       </section>
