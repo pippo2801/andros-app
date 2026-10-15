@@ -1,6 +1,6 @@
 # Andros OS — stato verificabile dei provider AI
 
-Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codice da quelle ancora da verificare sul dispositivo.
+Aggiornato: 2026-10-16. Questo documento distingue le funzioni presenti nel codice da quelle ancora da verificare sul dispositivo.
 
 ## Provider AI: stato attuale
 
