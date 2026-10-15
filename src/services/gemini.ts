@@ -48,8 +48,12 @@ export async function sendToGemini(
     typeof message.content === 'string')) {
     throw new Error('La cronologia contiene messaggi non validi. Controlla la conversazione e riprova.');
   }
+  const firstUserMessage = messages.findIndex((message) => message.role === 'user');
+  if (firstUserMessage < 0) {
+    throw new Error('La conversazione non contiene ancora un messaggio utente da inviare a Gemini.');
+  }
   const contents = messages
-    .filter((message, index) => index > 0 || message.role !== 'assistant')
+    .slice(firstUserMessage)
     .reduce<Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>>((items, message) => {
       const role = message.role === 'assistant' ? 'model' as const : 'user' as const;
       const previous = items[items.length - 1];
