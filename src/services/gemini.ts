@@ -43,6 +43,11 @@ export async function sendToGemini(
 ): Promise<string> {
   const key = apiKey.trim();
   if (!key) throw new Error('Configura una chiave Gemini API gratuita in Google AI Studio oppure usa Ollama.');
+  if (!Array.isArray(messages) || !messages.every((message) =>
+    message && (message.role === 'user' || message.role === 'assistant') &&
+    typeof message.content === 'string')) {
+    throw new Error('La cronologia contiene messaggi non validi. Controlla la conversazione e riprova.');
+  }
   const contents = messages
     .filter((message, index) => index > 0 || message.role !== 'assistant')
     .reduce<Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>>((items, message) => {
@@ -58,13 +63,13 @@ export async function sendToGemini(
       parts: [{ text: 'Regole permanenti approvate dall’utente. Rispettale quando pertinenti:\n' + approvedRules.map((rule) => `- ${rule}`).join('\n') }],
     };
   }
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(key)}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
   try {
     let result: any;
     if (Capacitor.isNativePlatform()) {
       const response = await CapacitorHttp.post({
         url,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
         data: body,
         connectTimeout: 15000,
         readTimeout: 120000,
@@ -75,7 +80,7 @@ export async function sendToGemini(
       }
       result = response.data;
     } else {
-      const response = await fetchWithTimeout(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const response = await fetchWithTimeout(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body) });
       result = await response.json();
       if (!response.ok) throw new Error(result?.error?.message || `HTTP ${response.status}`);
     }
