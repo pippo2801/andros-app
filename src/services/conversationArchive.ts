@@ -364,16 +364,23 @@ export function searchArchivedConversations(conversations: ArchivedConversation[
 }
 
 export function exportArchivedConversations(conversations: ArchivedConversation[]): string {
-  if (!Array.isArray(conversations) || !conversations.every((item) =>
-      Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
-        typeof item.id === 'string' && item.id.trim() &&
-        typeof item.title === 'string' && typeof item.source === 'string' &&
-        typeof item.importedAt === 'number' && Number.isFinite(item.importedAt) &&
-        Array.isArray(item.messages) && item.messages.every((message) =>
-          Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
-            (message.role === 'user' || message.role === 'assistant') &&
-            typeof message.content === 'string'))))) {
-    throw new Error('Impossibile esportare l’archivio: una o più conversazioni non sono valide.');
+  if (!Array.isArray(conversations) || conversations.length > MAX_CONVERSATIONS ||
+      !conversations.every((item) =>
+        Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
+          typeof item.id === 'string' && item.id.trim() && item.id.length <= MAX_ID_LENGTH &&
+          typeof item.title === 'string' && item.title.length <= MAX_TITLE_LENGTH &&
+          typeof item.source === 'string' && item.source.length <= MAX_SOURCE_LENGTH &&
+          typeof item.importedAt === 'number' && Number.isFinite(item.importedAt) &&
+          Array.isArray(item.messages) && item.messages.length <= MAX_MESSAGES_PER_CONVERSATION &&
+          item.messages.every((message) =>
+            Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
+              (message.role === 'user' || message.role === 'assistant') &&
+              typeof message.content === 'string' && message.content.length <= MAX_MESSAGE_LENGTH &&
+              (message.timestamp === undefined || (typeof message.timestamp === 'number' && Number.isFinite(message.timestamp))))))) {
+    throw new Error('Impossibile esportare l’archivio: una o più conversazioni superano i limiti o non sono valide.');
+  }
+  if (new Set(conversations.map((conversation) => conversation.id)).size !== conversations.length) {
+    throw new Error('Impossibile esportare l’archivio: sono presenti ID duplicati. Correggi l’archivio prima di esportare.');
   }
   return JSON.stringify({ app: 'ANDROS OS', version: 1, exportedAt: new Date().toISOString(), conversations }, null, 2);
 }
