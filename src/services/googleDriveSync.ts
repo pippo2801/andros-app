@@ -101,6 +101,34 @@ function mergeById(local: unknown[], remote: unknown[], label: string): unknown[
       if (typeof item.id !== 'string' || !item.id.trim()) {
         throw new Error(`Sincronizzazione interrotta: un elemento di ${label} non ha un ID valido. Nessun backup è stato sovrascritto.`);
       }
+      // Validate the fields consumed by the app before including remote records
+      // in a new backup. Otherwise the UI could silently discard them after upload.
+      const validMessages = (messages: unknown): boolean =>
+        Array.isArray(messages) && messages.every((message) =>
+          Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
+            ((message as Record<string, unknown>).role === 'user' ||
+             (message as Record<string, unknown>).role === 'assistant') &&
+            typeof (message as Record<string, unknown>).content === 'string'));
+      let validRecord = true;
+      if (label === 'chat') {
+        validRecord = typeof item.title === 'string' && validMessages(item.messages) &&
+          typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) &&
+          typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) &&
+          typeof item.pinned === 'boolean';
+      } else if (label === 'archivio') {
+        validRecord = typeof item.title === 'string' && Array.isArray(item.messages) &&
+          item.messages.every((message) => Boolean(message && typeof message === 'object' &&
+            !Array.isArray(message) &&
+            ((message as Record<string, unknown>).role === 'user' ||
+             (message as Record<string, unknown>).role === 'assistant') &&
+            typeof (message as Record<string, unknown>).content === 'string'));
+      } else if (label === 'regole') {
+        validRecord = typeof item.text === 'string' &&
+          typeof item.createdAt === 'number' && Number.isFinite(item.createdAt);
+      }
+      if (!validRecord) {
+        throw new Error(`Sincronizzazione interrotta: un elemento di ${label} non è completo o valido. Il backup remoto non è stato sovrascritto.`);
+      }
       const timestamp = recordTimestamp(value);
       const previous = map.get(item.id);
       if (!previous || timestamp > previous.timestamp || (source === 'local' && timestamp === previous.timestamp)) {
