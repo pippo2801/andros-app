@@ -308,9 +308,11 @@ export function saveArchivedConversations(conversations: ArchivedConversation[])
   if (!Array.isArray(conversations) || !conversations.every(validConversation)) {
     throw new Error('L’archivio contiene conversazioni non valide. I dati salvati non sono stati modificati.');
   }
-  const bounded = conversations.slice(-MAX_CONVERSATIONS);
+  if (conversations.length > MAX_CONVERSATIONS) {
+    throw new Error(`L’archivio può contenere al massimo ${MAX_CONVERSATIONS} conversazioni. Esporta una copia e rimuovi alcune conversazioni prima di aggiungerne altre; i dati esistenti non sono stati modificati.`);
+  }
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(bounded));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
   } catch {
     throw new Error('Memoria locale piena. Esporta o elimina alcune conversazioni e riprova.');
   }
