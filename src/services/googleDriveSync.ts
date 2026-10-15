@@ -21,6 +21,9 @@ const DRIVE_FILES = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD_FILES = 'https://www.googleapis.com/upload/drive/v3/files';
 
 async function request(url: string, token: string, method = 'GET', data?: string, contentType = 'application/json'): Promise<any> {
+  if (typeof token !== 'string' || !token.trim()) {
+    throw new Error('Sessione Google scaduta o non valida. Accedi di nuovo prima di sincronizzare.');
+  }
   const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
   if (data !== undefined) headers['Content-Type'] = contentType;
   if (Capacitor.isNativePlatform()) {
