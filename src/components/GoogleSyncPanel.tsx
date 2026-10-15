@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Cloud, CloudDownload, CloudUpload, LogIn, LogOut, ShieldCheck, X, AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react';
 import { signInWithGoogle, syncAndrosSnapshot, type AndrosSyncSnapshot, type GoogleSession } from '../services/googleDriveSync';
-import { loadArchivedConversations, saveArchivedConversations } from '../services/conversationArchive';
+import { loadArchivedConversationsForSync, loadArchivedConversations, saveArchivedConversations } from '../services/conversationArchive';
 import { loadChatSessionState, loadDeletedChatSessions, saveChatSessionState, saveDeletedChatSessions, type ChatSession } from '../services/chatSessions';
 
 const CLIENT_KEY = 'andros.google.oauth-client-id.v1';
@@ -45,13 +45,24 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
     if (!session) return;
     setBusy(true); setError(''); setStatus('');
     try {
-      let archive: unknown[] = [];
+      const archive: unknown[] = loadArchivedConversationsForSync();
+      const rawRules = localStorage.getItem(RULES_KEY);
       let rules: unknown[] = [];
-      try { archive = loadArchivedConversations(); } catch { archive = []; }
-      try {
-        const parsed = JSON.parse(localStorage.getItem(RULES_KEY) || '[]');
-        if (Array.isArray(parsed)) rules = parsed;
-      } catch { rules = []; }
+      if (rawRules !== null) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(rawRules);
+        } catch {
+          throw new Error('Le regole permanenti locali sono danneggiate. La sincronizzazione è stata interrotta per proteggere il backup.');
+        }
+        if (!Array.isArray(parsed) || !parsed.every((rule) =>
+          Boolean(rule && typeof rule === 'object' &&
+            typeof rule.id === 'string' && typeof rule.text === 'string' &&
+            typeof rule.createdAt === 'number' && Number.isFinite(rule.createdAt)))) {
+          throw new Error('Le regole permanenti locali non hanno un formato valido. La sincronizzazione è stata interrotta per proteggere il backup.');
+        }
+        rules = parsed;
+      }
       const chatState = loadChatSessionState();
       const local: AndrosSyncSnapshot = {
         schema: 3,
