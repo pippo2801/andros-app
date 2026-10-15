@@ -239,6 +239,25 @@ export function loadArchivedConversations(): ArchivedConversation[] {
   }
 }
 
+/** Strict loader for cloud sync: malformed local data must never look like an empty archive. */
+export function loadArchivedConversationsForSync(): ArchivedConversation[] {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw === null) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('L’archivio locale è danneggiato. La sincronizzazione è stata interrotta per evitare di sovrascrivere il backup con un archivio vuoto.');
+  }
+  if (!Array.isArray(parsed) || !parsed.every((item) =>
+    Boolean(item && typeof item === 'object' &&
+      typeof item.id === 'string' && typeof item.title === 'string' &&
+      Array.isArray(item.messages)))) {
+    throw new Error('L’archivio locale non ha un formato valido. La sincronizzazione è stata interrotta per proteggere il backup.');
+  }
+  return parsed as ArchivedConversation[];
+}
+
 export function saveArchivedConversations(conversations: ArchivedConversation[]): void {
   const bounded = conversations.slice(-MAX_CONVERSATIONS);
   try {
