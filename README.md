@@ -11,7 +11,7 @@ Andros OS è un'app Android basata su React, Vite e Capacitor, progettata per re
 - Provider Gemini 2.5 Flash facoltativo, attivabile con una chiave API ottenuta da Google AI Studio. La chiave resta in `sessionStorage`, non viene inserita nei file del repository e viene richiesta nuovamente in una nuova sessione.
 - Strategia AI selezionabile: automatica, solo Ollama oppure Gemini. In modalità automatica Andros privilegia Ollama per il codice e può usare Gemini per altri compiti quando è configurato; in caso di errore locale può ripiegare su Gemini.
 - Archivio locale: importazione JSON, TXT, MD, HTML, CSV e ZIP. Può leggere direttamente gli ZIP ChatGPT che contengono `conversations.json`; supporta CSV con colonne prompt/response e dati testuali generici. Ricerca, ripristino, salvataggio della chat corrente ed esportazione.
-- Accesso OAuth Google e backup/sincronizzazione dell'archivio e delle regole tramite la file JSON visibile in Google Drive, dopo la configurazione del progetto OAuth.
+- Accesso OAuth Google e backup/sincronizzazione di chat attive, archivio, regole e registro delle chat eliminate tramite un file JSON visibile in Google Drive, dopo la configurazione del progetto OAuth.
 - Collegamenti per aprire ChatGPT, Copilot e Gemini nei rispettivi servizi, senza fingere un accesso alle loro chat private.
 
 ## Installazione e build
@@ -60,7 +60,7 @@ Il login è reale, ma richiede la configurazione OAuth del proprietario del prog
 4. Inserisci il Client ID completo nelle impostazioni **Account Google e sincronizzazione**.
 5. Premi **Accedi con Google**, autorizza l'ambito minimo richiesto e poi **Sincronizza**.
 
-Andros richiede `openid`, `email`, `profile` e `drive.file`. La sincronizzazione crea o aggiorna il file `andros-os-sync-v1.json` nella tua area Drive, visibile e gestibile da te; non legge l'intera cartella Drive. Il token d'accesso resta in memoria durante la sessione e non viene salvato su disco. Per usare la sincronizzazione su più dispositivi, configura lo stesso progetto OAuth e autorizza l'account su ciascuno. Il primo login va verificato su dispositivo reale: le impostazioni OAuth e il certificato devono corrispondere alla build.
+Andros richiede `openid`, `email`, `profile` e `drive.file`. La sincronizzazione crea o aggiorna il file `andros-os-sync-v1.json` nella tua area Drive, visibile e gestibile da te; non legge l'intera cartella Drive. Il formato corrente (schema 3) include chat attive, archivio, regole e tombstone delle chat eliminate, così le eliminazioni possono essere propagate tra dispositivi aggiornati. Il token d'accesso resta in memoria durante la sessione e non viene salvato su disco. Per usare la sincronizzazione su più dispositivi, configura lo stesso progetto OAuth e autorizza l'account su ciascuno. Il login e la propagazione delle cancellazioni devono ancora essere verificati su dispositivi reali: non considerare il backup cloud come unica copia finché questi test non sono superati.
 
 ## ChatGPT, Gemini e Copilot: cosa può importare Andros
 
