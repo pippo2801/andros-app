@@ -275,6 +275,10 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
     deletedSessions,
   };
   const body = JSON.stringify(merged);
+  const payloadBytes = new TextEncoder().encode(body).byteLength;
+  if (payloadBytes > 50 * 1024 * 1024) {
+    throw new Error('Il backup Andros supera il limite di sicurezza di 50 MB. Esporta una copia e riduci l’archivio prima di sincronizzare; il backup remoto non è stato modificato.');
+  }
   if (existing?.id) {
     // Optimistic concurrency check: don't overwrite if another device changed
     // the backup while this device was downloading and merging it.
