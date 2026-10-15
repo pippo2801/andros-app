@@ -4,6 +4,8 @@ export const CHAT_SESSIONS_KEY = 'andros.chat.sessions.v1';
 export const LEGACY_HISTORY_KEY = 'andros.chat.history.v1';
 export const MAX_PINNED_CHATS = 30;
 export const DELETED_CHAT_SESSIONS_KEY = 'andros.chat.sessions.deleted.v1';
+const MAX_DELETED_CHAT_SESSIONS = 10_000;
+const MAX_DELETED_CHAT_ID_LENGTH = 200;
 
 export interface DeletedChatSession { id: string; deletedAt: number; }
 
@@ -17,19 +19,25 @@ export function loadDeletedChatSessions(): DeletedChatSession[] {
   } catch {
     throw new Error('Il registro locale delle chat eliminate è danneggiato. Per evitare che ricompaiano conversazioni eliminate, la sincronizzazione è stata interrotta.');
   }
-  if (!Array.isArray(parsed) || !parsed.every((item) =>
+  if (!Array.isArray(parsed) || parsed.length > MAX_DELETED_CHAT_SESSIONS || !parsed.every((item) =>
     Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
-      typeof item.id === 'string' && item.id.trim() &&
+      typeof item.id === 'string' && item.id.trim() && item.id.trim().length <= MAX_DELETED_CHAT_ID_LENGTH &&
       typeof item.deletedAt === 'number' && Number.isFinite(item.deletedAt)))) {
-    throw new Error('Il registro locale delle chat eliminate non è valido. Per sicurezza la sincronizzazione è stata interrotta.');
+    throw new Error(`Il registro delle chat eliminate non è valido o supera ${MAX_DELETED_CHAT_SESSIONS} voci. Per sicurezza la sincronizzazione è stata interrotta.`);
   }
-  return (parsed as DeletedChatSession[]).map((item) => ({ id: item.id.trim(), deletedAt: item.deletedAt }));
+  const latest = new Map<string, DeletedChatSession>();
+  for (const item of parsed as DeletedChatSession[]) {
+    const id = item.id.trim();
+    const previous = latest.get(id);
+    if (!previous || item.deletedAt > previous.deletedAt) latest.set(id, { id, deletedAt: item.deletedAt });
+  }
+  return [...latest.values()];
 }
 
 export function saveDeletedChatSessions(items: DeletedChatSession[]): void {
   if (!Array.isArray(items) || !items.every((item) =>
     Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
-      typeof item.id === 'string' && item.id.trim() &&
+      typeof item.id === 'string' && item.id.trim() && item.id.trim().length <= MAX_DELETED_CHAT_ID_LENGTH &&
       typeof item.deletedAt === 'number' && Number.isFinite(item.deletedAt)))) {
     throw new Error('Il registro delle chat eliminate contiene dati non validi. I dati esistenti non sono stati modificati.');
   }
@@ -40,6 +48,9 @@ export function saveDeletedChatSessions(items: DeletedChatSession[]): void {
     const previous = latest.get(id);
     if (!previous || item.deletedAt > previous.deletedAt) latest.set(id, { id, deletedAt: item.deletedAt });
   }
+  if (latest.size > MAX_DELETED_CHAT_SESSIONS) {
+    throw new Error(`Il registro delle chat eliminate supera ${MAX_DELETED_CHAT_SESSIONS} voci. Esporta e conserva un backup prima di modificare il registro; i dati esistenti non sono stati modificati.`);
+  }
   try {
     localStorage.setItem(DELETED_CHAT_SESSIONS_KEY, JSON.stringify([...latest.values()]));
   } catch {
@@ -49,7 +60,9 @@ export function saveDeletedChatSessions(items: DeletedChatSession[]): void {
 
 export function recordDeletedChatSession(id: string): void {
   const normalizedId = typeof id === 'string' ? id.trim() : '';
-  if (!normalizedId) return;
+  if (!normalizedId || normalizedId.length > MAX_DELETED_CHAT_ID_LENGTH) {
+    throw new Error('Impossibile registrare la cancellazione: identificativo della chat non valido.');
+  }
   saveDeletedChatSessions([...loadDeletedChatSessions(), { id: normalizedId, deletedAt: Date.now() }]);
 }
 
