@@ -8,10 +8,11 @@ export interface GoogleSession {
 }
 
 export interface AndrosSyncSnapshot {
-  schema: 1;
+  schema: 2;
   updatedAt: number;
   archive: unknown[];
   rules: unknown[];
+  sessions: unknown[];
 }
 
 const APP_DATA_FILENAME = 'andros-os-sync-v1.json';
@@ -23,12 +24,7 @@ async function request(url: string, token: string, method = 'GET', data?: string
   if (data !== undefined) headers['Content-Type'] = contentType;
   if (Capacitor.isNativePlatform()) {
     const response = await CapacitorHttp.request({
-      url,
-      method,
-      headers,
-      data,
-      connectTimeout: 12000,
-      readTimeout: 30000,
+      url, method, headers, data, connectTimeout: 12000, readTimeout: 30000,
     });
     if (response.status < 200 || response.status >= 300) {
       throw new Error(`Google Drive ha risposto con HTTP ${response.status}.`);
@@ -39,8 +35,7 @@ async function request(url: string, token: string, method = 'GET', data?: string
   if (!response.ok) throw new Error(`Google Drive ha risposto con HTTP ${response.status}.`);
   if (response.status === 204) return null;
   const responseType = response.headers.get('content-type') || '';
-  if (responseType.includes('application/json')) return response.json();
-  return response.text();
+  return responseType.includes('application/json') ? response.json() : response.text();
 }
 
 export async function signInWithGoogle(clientId: string): Promise<GoogleSession> {
@@ -93,14 +88,9 @@ function recordTimestamp(value: unknown): number {
   return 0;
 }
 
-/**
- * Merge records by ID without allowing an older remote copy to overwrite a
- * newer local copy. When timestamps are absent or equal, the local record
- * wins deterministically. Records without IDs are ignored because they cannot
- * be safely deduplicated.
- */
+/** Merge by ID; newer timestamp wins, with local data winning ties or missing timestamps. */
 function mergeById(local: unknown[], remote: unknown[]): unknown[] {
-  const map = new Map<string, { value: unknown; timestamp: number; source: 'local' | 'remote' }>();
+  const map = new Map<string, { value: unknown; timestamp: number }>();
   for (const [source, values] of [['remote', remote], ['local', local]] as const) {
     for (const value of values) {
       if (!value || typeof value !== 'object') continue;
@@ -108,8 +98,8 @@ function mergeById(local: unknown[], remote: unknown[]): unknown[] {
       if (typeof item.id !== 'string' || !item.id.trim()) continue;
       const timestamp = recordTimestamp(value);
       const previous = map.get(item.id);
-      if (!previous || timestamp >= previous.timestamp || (source === 'local' && timestamp === previous.timestamp)) {
-        map.set(item.id, { value, timestamp, source });
+      if (!previous || timestamp > previous.timestamp || (source === 'local' && timestamp === previous.timestamp)) {
+        map.set(item.id, { value, timestamp });
       }
     }
   }
@@ -125,13 +115,19 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   });
   const listed = await request(`${DRIVE_FILES}?${query.toString()}`, token);
   const existing = Array.isArray(listed?.files) ? listed.files.find((file: any) => file.name === APP_DATA_FILENAME) : undefined;
-  let remote: AndrosSyncSnapshot | null = null;
+  let remote: { archive: unknown[]; rules: unknown[]; sessions: unknown[] } | null = null;
   if (existing?.id) {
     try {
       const downloaded = await request(`${DRIVE_FILES}/${encodeURIComponent(existing.id)}?alt=media`, token);
       const parsed = typeof downloaded === 'string' ? JSON.parse(downloaded) : downloaded;
-      if (parsed?.schema === 1 && Array.isArray(parsed.archive) && Array.isArray(parsed.rules)) {
-        remote = parsed as AndrosSyncSnapshot;
+      // Read schema 1 backups as well as schema 2; old backups simply have no sessions.
+      if ((parsed?.schema === 1 || parsed?.schema === 2) &&
+          Array.isArray(parsed.archive) && Array.isArray(parsed.rules)) {
+        remote = {
+          archive: parsed.archive,
+          rules: parsed.rules,
+          sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
+        };
       }
     } catch {
       // A malformed remote backup is never allowed to replace local data.
@@ -139,10 +135,11 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   }
 
   const merged: AndrosSyncSnapshot = {
-    schema: 1,
+    schema: 2,
     updatedAt: Date.now(),
-    archive: mergeById(local.archive, Array.isArray(remote?.archive) ? remote.archive : []),
-    rules: mergeById(local.rules, Array.isArray(remote?.rules) ? remote.rules : []),
+    archive: mergeById(local.archive, remote?.archive ?? []),
+    rules: mergeById(local.rules, remote?.rules ?? []),
+    sessions: mergeById(local.sessions, remote?.sessions ?? []),
   };
   const body = JSON.stringify(merged);
   if (existing?.id) {
