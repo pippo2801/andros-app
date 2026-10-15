@@ -8,11 +8,12 @@ export interface GoogleSession {
 }
 
 export interface AndrosSyncSnapshot {
-  schema: 2;
+  schema: 3;
   updatedAt: number;
   archive: unknown[];
   rules: unknown[];
   sessions: unknown[];
+  deletedSessions: Array<{ id: string; deletedAt: number }>;
 }
 
 const APP_DATA_FILENAME = 'andros-os-sync-v1.json';
@@ -119,7 +120,7 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   });
   const listed = await request(`${DRIVE_FILES}?${query.toString()}`, token);
   const existing = Array.isArray(listed?.files) ? listed.files.find((file: any) => file.name === APP_DATA_FILENAME) : undefined;
-  let remote: { archive: unknown[]; rules: unknown[]; sessions: unknown[] } | null = null;
+  let remote: { archive: unknown[]; rules: unknown[]; sessions: unknown[]; deletedSessions: Array<{ id: string; deletedAt: number }> } | null = null;
   if (existing?.id) {
     // Do not overwrite an existing backup if it cannot be read or validated.
     // A silent fallback to local-only data could erase valid remote records.
@@ -140,24 +141,44 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
     }
 
     // Read schema 1 backups as well as schema 2; old backups simply have no sessions.
-    if (!parsed || (parsed.schema !== 1 && parsed.schema !== 2) ||
+    if (!parsed || ![1, 2, 3].includes(parsed.schema) ||
         !Array.isArray(parsed.archive) || !Array.isArray(parsed.rules) ||
-        (parsed.sessions !== undefined && !Array.isArray(parsed.sessions))) {
+        (parsed.sessions !== undefined && !Array.isArray(parsed.sessions)) ||
+        (parsed.deletedSessions !== undefined && !Array.isArray(parsed.deletedSessions))) {
       throw new Error('Il backup Google Drive ha un formato non riconosciuto. Per sicurezza non è stato sovrascritto.');
     }
     remote = {
       archive: parsed.archive,
       rules: parsed.rules,
       sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
+      deletedSessions: Array.isArray(parsed.deletedSessions) ? parsed.deletedSessions : [],
     };
   }
 
+  const deletedMap = new Map<string, { id: string; deletedAt: number }>();
+  for (const tombstone of [...(remote?.deletedSessions ?? []), ...(local.deletedSessions ?? [])]) {
+    if (!tombstone || typeof tombstone.id !== 'string' || !tombstone.id.trim() ||
+        typeof tombstone.deletedAt !== 'number' || !Number.isFinite(tombstone.deletedAt)) {
+      throw new Error('Sincronizzazione interrotta: registro delle chat eliminate non valido. Il backup remoto non è stato sovrascritto.');
+    }
+    const previous = deletedMap.get(tombstone.id);
+    if (!previous || tombstone.deletedAt > previous.deletedAt) deletedMap.set(tombstone.id, tombstone);
+  }
+  const deletedSessions = [...deletedMap.values()];
+  const mergedSessions = mergeById(local.sessions, remote?.sessions ?? [], 'chat');
+  const sessions = mergedSessions.filter((session) => {
+    const item = session as Record<string, unknown>;
+    const tombstone = deletedMap.get(item.id as string);
+    return !tombstone || recordTimestamp(session) > tombstone.deletedAt;
+  });
+
   const merged: AndrosSyncSnapshot = {
-    schema: 2,
+    schema: 3,
     updatedAt: Date.now(),
     archive: mergeById(local.archive, remote?.archive ?? [], 'archivio'),
     rules: mergeById(local.rules, remote?.rules ?? [], 'regole'),
-    sessions: mergeById(local.sessions, remote?.sessions ?? [], 'chat'),
+    sessions,
+    deletedSessions,
   };
   const body = JSON.stringify(merged);
   if (existing?.id) {
