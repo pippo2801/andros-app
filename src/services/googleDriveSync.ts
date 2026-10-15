@@ -152,6 +152,13 @@ function mergeById(local: unknown[], remote: unknown[], label: string): unknown[
 }
 
 export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapshot): Promise<AndrosSyncSnapshot> {
+  if (typeof token !== 'string' || !token.trim()) {
+    throw new Error('Sessione Google scaduta o token mancante. Accedi di nuovo prima di sincronizzare.');
+  }
+  if (!local || local.schema !== 3 || !Array.isArray(local.archive) || !Array.isArray(local.rules) ||
+      !Array.isArray(local.sessions) || !Array.isArray(local.deletedSessions)) {
+    throw new Error('I dati locali da sincronizzare non hanno un formato valido. Nessun backup remoto è stato modificato.');
+  }
   const query = new URLSearchParams({
     spaces: 'drive',
     q: `name='${APP_DATA_FILENAME}' and trashed=false`,
