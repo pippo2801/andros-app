@@ -46,6 +46,10 @@ Il workflow GitHub Actions **Build Android APK** produce l'artefatto `ANDROS-OS-
 
 La chiave resta nella sessione corrente. Il livello gratuito è soggetto a disponibilità, limiti e condizioni Google; non inviare contenuti sensibili se non hai verificato le condizioni del provider. Se non configuri la chiave, Andros continua a usare Ollama.
 
+## Valutazione FreeLLMAPI
+
+Il progetto [RealTask/free-llm-api](https://github.com/RealTask/free-llm-api) è stato esaminato. È un toolkit Python per orchestrare diversi provider, non un endpoint pubblico gratuito già pronto per l'app. Per usarlo serve eseguire e verificare un backend e configurare gli eventuali provider/chiavi. Per ora non sostituisce Ollama: la decisione e la checklist d'integrazione sono documentate in [docs/AI_PROVIDER_STATUS.md](docs/AI_PROVIDER_STATUS.md). Non vengono promesse quote illimitate o provider gratuiti sempre disponibili.
+
 ## Attivare Google Drive Sync
 
 Il login è reale, ma richiede la configurazione OAuth del proprietario del progetto: nessuna app può autenticarsi con il tuo account senza che il progetto abbia un client OAuth valido.
@@ -79,3 +83,4 @@ Le esportazioni sono file forniti dall'utente. L'autenticazione Google **non** a
 - Le chiavi API non devono essere committate nel repository.
 - I backup cloud includono le conversazioni archiviate e le regole approvate: importa e sincronizza solo contenuti che vuoi conservare su Drive.
 - Questa è una build di test. Login e sync vanno verificati con il Client ID OAuth del progetto e su dispositivo fisico prima di considerare completata la release.
+- Checklist dei moduli, stato verificabile e test mancanti: [docs/AI_PROVIDER_STATUS.md](docs/AI_PROVIDER_STATUS.md).
