@@ -32,7 +32,7 @@ export function getOllamaConfig(): OllamaConfig {
       const model = typeof values.model === 'string' && values.model.trim()
         ? values.model.trim()
         : DEFAULT_CONFIG.model;
-      if (model.length > 200 || /\\s/.test(model)) return { ...DEFAULT_CONFIG };
+      if (model.length > 200 || /\s/.test(model)) return { ...DEFAULT_CONFIG };
       let parsedEndpoint: URL;
       try {
         parsedEndpoint = new URL(endpoint);
@@ -73,7 +73,7 @@ export function saveOllamaConfig(config: OllamaConfig): OllamaConfig {
     throw new Error('L’indirizzo Ollama deve usare HTTP o HTTPS, avere un host valido e non contenere credenziali, query o frammenti.');
   }
   if (!normalized.model) throw new Error('Inserisci il nome del modello Ollama.');
-  if (normalized.model.length > 200 || /\\s/.test(normalized.model)) {
+  if (normalized.model.length > 200 || /\s/.test(normalized.model)) {
     throw new Error('Il nome del modello Ollama non è valido. Usa il nome restituito da /api/tags, senza spazi e con massimo 200 caratteri.');
   }
   localStorage.setItem(CONFIG_KEY, JSON.stringify(normalized));
@@ -176,7 +176,7 @@ export async function sendToOllama(
   }
   const model = modelOverride?.trim() || config.model;
   if (!model) throw new Error('Seleziona un modello Ollama nelle impostazioni.');
-  if (model.length > 200 || /\\s/.test(model)) throw new Error('Il nome del modello Ollama non è valido.');
+  if (model.length > 200 || /\s/.test(model)) throw new Error('Il nome del modello Ollama non è valido.');
 
   try {
     const systemMessage = approvedRules.length
