@@ -17,6 +17,11 @@ export interface AndrosSyncSnapshot {
 }
 
 const APP_DATA_FILENAME = 'andros-os-sync-v1.json';
+const MAX_SYNC_ID_LENGTH = 200;
+const MAX_SYNC_TITLE_LENGTH = 200;
+const MAX_SYNC_SOURCE_LENGTH = 100;
+const MAX_SYNC_ARCHIVE_MESSAGES = 20_000;
+const MAX_SYNC_ARCHIVE_MESSAGE_LENGTH = 40_000;
 const DRIVE_FILES = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD_FILES = 'https://www.googleapis.com/upload/drive/v3/files';
 
@@ -117,8 +122,9 @@ function mergeById(local: unknown[], remote: unknown[], label: string): unknown[
         throw new Error(`Sincronizzazione interrotta: elemento non valido in ${label}. Nessun backup è stato sovrascritto.`);
       }
       const item = value as Record<string, unknown>;
-      if (typeof item.id !== 'string' || !item.id.trim() || item.id !== item.id.trim()) {
-        throw new Error(`Sincronizzazione interrotta: un elemento di ${label} non ha un ID valido. Nessun backup è stato sovrascritto.`);
+      if (typeof item.id !== 'string' || !item.id.trim() || item.id !== item.id.trim() ||
+          item.id.length > MAX_SYNC_ID_LENGTH) {
+        throw new Error(`Sincronizzazione interrotta: un elemento di ${label} non ha un ID valido o supera ${MAX_SYNC_ID_LENGTH} caratteri. Nessun backup è stato sovrascritto.`);
       }
       if (sourceIds.has(item.id)) {
         throw new Error(`Sincronizzazione interrotta: ${source === 'local' ? 'i dati locali' : 'il backup Google Drive'} contengono ID duplicati in ${label}. Nessun backup è stato sovrascritto.`);
@@ -126,27 +132,29 @@ function mergeById(local: unknown[], remote: unknown[], label: string): unknown[
       sourceIds.add(item.id);
       // Validate the fields consumed by the app before including remote records
       // in a new backup. Otherwise the UI could silently discard them after upload.
-      const validMessages = (messages: unknown): boolean =>
-        Array.isArray(messages) && messages.every((message) =>
-          Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
-            ((message as Record<string, unknown>).role === 'user' ||
-             (message as Record<string, unknown>).role === 'assistant') &&
-            typeof (message as Record<string, unknown>).content === 'string'));
+      const validMessages = (messages: unknown, archive = false): boolean =>
+        Array.isArray(messages) && messages.every((message) => {
+          if (!message || typeof message !== 'object' || Array.isArray(message)) return false;
+          const entry = message as Record<string, unknown>;
+          return (entry.role === 'user' || entry.role === 'assistant') &&
+            typeof entry.content === 'string' &&
+            (!archive || entry.content.length <= MAX_SYNC_ARCHIVE_MESSAGE_LENGTH) &&
+            (entry.timestamp === undefined ||
+              (typeof entry.timestamp === 'number' && Number.isFinite(entry.timestamp)));
+        });
       let validRecord = true;
       if (label === 'chat') {
-        validRecord = typeof item.title === 'string' && validMessages(item.messages) &&
+        validRecord = typeof item.title === 'string' && item.title.length <= MAX_SYNC_TITLE_LENGTH &&
+          validMessages(item.messages) &&
           typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) &&
           typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) &&
           typeof item.pinned === 'boolean';
       } else if (label === 'archivio') {
-        validRecord = typeof item.title === 'string' && typeof item.source === 'string' &&
+        validRecord = typeof item.title === 'string' && item.title.length <= MAX_SYNC_TITLE_LENGTH &&
+          typeof item.source === 'string' && item.source.length <= MAX_SYNC_SOURCE_LENGTH &&
           typeof item.importedAt === 'number' && Number.isFinite(item.importedAt) &&
-          Array.isArray(item.messages) &&
-          item.messages.every((message) => Boolean(message && typeof message === 'object' &&
-            !Array.isArray(message) &&
-            ((message as Record<string, unknown>).role === 'user' ||
-             (message as Record<string, unknown>).role === 'assistant') &&
-            typeof (message as Record<string, unknown>).content === 'string'));
+          Array.isArray(item.messages) && item.messages.length <= MAX_SYNC_ARCHIVE_MESSAGES &&
+          validMessages(item.messages, true);
       } else if (label === 'regole') {
         validRecord = typeof item.text === 'string' && Boolean(item.text.trim()) &&
           item.text === item.text.trim() && item.text.length <= 500 &&
