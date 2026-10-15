@@ -77,8 +77,8 @@ function isMessage(value: unknown): value is ChatMessageData {
 function validSession(value: unknown): value is ChatSession {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const item = value as Record<string, unknown>;
-  return typeof item.id === 'string' && Boolean(item.id.trim()) &&
-    typeof item.title === 'string' &&
+  return typeof item.id === 'string' && Boolean(item.id.trim()) && item.id === item.id.trim() &&
+    typeof item.title === 'string' && Boolean(item.title.trim()) &&
     Array.isArray(item.messages) && item.messages.every(isMessage) &&
     typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) &&
     typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) &&
