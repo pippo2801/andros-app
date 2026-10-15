@@ -116,7 +116,7 @@ function mergeById(local: unknown[], remote: unknown[], label: string): unknown[
         throw new Error(`Sincronizzazione interrotta: elemento non valido in ${label}. Nessun backup è stato sovrascritto.`);
       }
       const item = value as Record<string, unknown>;
-      if (typeof item.id !== 'string' || !item.id.trim()) {
+      if (typeof item.id !== 'string' || !item.id.trim() || item.id !== item.id.trim()) {
         throw new Error(`Sincronizzazione interrotta: un elemento di ${label} non ha un ID valido. Nessun backup è stato sovrascritto.`);
       }
       // Validate the fields consumed by the app before including remote records
