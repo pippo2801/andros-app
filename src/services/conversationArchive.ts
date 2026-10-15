@@ -290,6 +290,10 @@ export function loadArchivedConversationsForSync(): ArchivedConversation[] {
   if (!Array.isArray(parsed) || !parsed.every(validConversation)) {
     throw new Error('L’archivio locale non ha un formato valido. La sincronizzazione è stata interrotta per proteggere il backup.');
   }
+  const ids = new Set(parsed.map((conversation) => conversation.id));
+  if (ids.size !== parsed.length) {
+    throw new Error('L’archivio locale contiene ID duplicati. La sincronizzazione è stata interrotta per evitare di sovrapporre conversazioni diverse.');
+  }
   return parsed;
 }
 
@@ -312,6 +316,10 @@ export function saveArchivedConversations(conversations: ArchivedConversation[])
   }
   if (conversations.length > MAX_CONVERSATIONS) {
     throw new Error(`L’archivio può contenere al massimo ${MAX_CONVERSATIONS} conversazioni. Esporta una copia e rimuovi alcune conversazioni prima di aggiungerne altre; i dati esistenti non sono stati modificati.`);
+  }
+  const ids = new Set(conversations.map((conversation) => conversation.id));
+  if (ids.size !== conversations.length) {
+    throw new Error('L’archivio contiene ID duplicati. Rinomina o rimuovi le voci duplicate prima di salvare; i dati esistenti non sono stati modificati.');
   }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
