@@ -134,7 +134,9 @@ function mergeById(local: unknown[], remote: unknown[], label: string): unknown[
           typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) &&
           typeof item.pinned === 'boolean';
       } else if (label === 'archivio') {
-        validRecord = typeof item.title === 'string' && Array.isArray(item.messages) &&
+        validRecord = typeof item.title === 'string' && typeof item.source === 'string' &&
+          typeof item.importedAt === 'number' && Number.isFinite(item.importedAt) &&
+          Array.isArray(item.messages) &&
           item.messages.every((message) => Boolean(message && typeof message === 'object' &&
             !Array.isArray(message) &&
             ((message as Record<string, unknown>).role === 'user' ||
