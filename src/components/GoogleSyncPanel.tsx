@@ -73,27 +73,51 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
         deletedSessions: loadDeletedChatSessions(),
       };
       const merged = await syncAndrosSnapshot(session.accessToken, local);
+
+      // Validate the complete merged snapshot before changing any local storage.
+      // Filtering invalid records here could silently discard data after Drive was updated.
+      const isRecord = (value: unknown): value is Record<string, unknown> =>
+        Boolean(value && typeof value === 'object' && !Array.isArray(value));
+      const validRules = merged.rules.filter((rule) =>
+        isRecord(rule) && typeof rule.id === 'string' && Boolean(rule.id.trim()) &&
+        typeof rule.text === 'string' &&
+        typeof rule.createdAt === 'number' && Number.isFinite(rule.createdAt));
+      if (validRules.length !== merged.rules.length) {
+        throw new Error('Le regole unite dalla sincronizzazione non sono valide. I dati locali non sono stati aggiornati.');
+      }
+      const validSessions = merged.sessions.filter((item) =>
+        isRecord(item) && typeof item.id === 'string' && Boolean(item.id.trim()) &&
+        typeof item.title === 'string' &&
+        Array.isArray(item.messages) && item.messages.every((message) =>
+          isRecord(message) &&
+          (message.role === 'user' || message.role === 'assistant') &&
+          typeof message.content === 'string') &&
+        typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) &&
+        typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) &&
+        typeof item.pinned === 'boolean');
+      if (validSessions.length !== merged.sessions.length) {
+        throw new Error('Le chat unite dalla sincronizzazione non sono valide. I dati locali non sono stati aggiornati.');
+      }
+      const validArchive = merged.archive.every((item) =>
+        isRecord(item) && typeof item.id === 'string' && Boolean(item.id.trim()) &&
+        typeof item.title === 'string' && Array.isArray(item.messages) &&
+        item.messages.every((message) =>
+          isRecord(message) &&
+          (message.role === 'user' || message.role === 'assistant') &&
+          typeof message.content === 'string'));
+      if (!validArchive) {
+        throw new Error('L’archivio unito dalla sincronizzazione non è valido. I dati locali non sono stati aggiornati.');
+      }
+
+      // All records are validated before the first local write.
       saveArchivedConversations(merged.archive as ReturnType<typeof loadArchivedConversations>);
-      const validRules = merged.rules.filter((rule): rule is MemoryRule =>
-        Boolean(rule && typeof rule === 'object' &&
-          typeof (rule as MemoryRule).id === 'string' &&
-          typeof (rule as MemoryRule).text === 'string' &&
-          typeof (rule as MemoryRule).createdAt === 'number'));
       localStorage.setItem(RULES_KEY, JSON.stringify(validRules));
-      const validSessions = merged.sessions.filter((item): item is ChatSession =>
-        Boolean(item && typeof item === 'object' &&
-          typeof (item as ChatSession).id === 'string' &&
-          typeof (item as ChatSession).title === 'string' &&
-          Array.isArray((item as ChatSession).messages) &&
-          typeof (item as ChatSession).createdAt === 'number' &&
-          typeof (item as ChatSession).updatedAt === 'number' &&
-          typeof (item as ChatSession).pinned === 'boolean'));
       saveDeletedChatSessions(merged.deletedSessions);
       const activeId = validSessions.some((item) => item.id === chatState.activeId)
         ? chatState.activeId
         : validSessions[0]?.id || chatState.activeId;
-      saveChatSessionState({ activeId, sessions: validSessions });
-      onSynced({ rules: validRules, sessions: validSessions });
+      saveChatSessionState({ activeId, sessions: validSessions as ChatSession[] });
+      onSynced({ rules: validRules as MemoryRule[], sessions: validSessions as ChatSession[] });
       setStatus(`Sincronizzazione completata: ${validSessions.length} chat, ${merged.archive.length} conversazioni archiviate e ${validRules.length} regole disponibili su Google Drive.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Sincronizzazione non riuscita.');
