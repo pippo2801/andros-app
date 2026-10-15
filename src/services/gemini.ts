@@ -28,6 +28,7 @@ export function getGeminiApiKey(): string {
 }
 
 export function setGeminiApiKey(key: string): void {
+  if (typeof key !== 'string') throw new Error('La chiave Gemini deve essere una stringa.');
   try {
     if (key.trim()) sessionStorage.setItem('andros.gemini.api-key.session', key.trim());
     else sessionStorage.removeItem('andros.gemini.api-key.session');
@@ -94,10 +95,20 @@ export async function sendToGemini(
       result = response.data;
     } else {
       const response = await fetchWithTimeout(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body) });
-      result = await response.json();
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error('Gemini ha restituito una risposta non leggibile. Riprova tra poco.');
+      }
       if (!response.ok) throw new Error(result?.error?.message || `HTTP ${response.status}`);
     }
-    const text = result?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || '').join('').trim();
+    const parts: unknown = result?.candidates?.[0]?.content?.parts;
+    const text = Array.isArray(parts)
+      ? parts.filter((part): part is { text: string } =>
+          Boolean(part && typeof part === 'object' && !Array.isArray(part) &&
+            typeof (part as Record<string, unknown>).text === 'string'))
+          .map((part) => part.text).join('').trim()
+      : '';
     if (!text) throw new Error('Gemini non ha restituito testo. La richiesta potrebbe essere stata bloccata o non avere una risposta disponibile.');
     return text;
   } catch (error) {
