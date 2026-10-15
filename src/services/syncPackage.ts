@@ -134,7 +134,10 @@ export function importAndMergeSyncPackage(pack: SyncPackage): { rulesAdded: numb
   let rulesAdded = 0;
   for (const rule of pack.rules) {
     const key = rule.text.trim().toLocaleLowerCase();
-    if (!rulesByText.has(key) && existingRules.length + rulesAdded < MAX_RULES) {
+    if (!rulesByText.has(key)) {
+      if (existingRules.length + rulesAdded >= MAX_RULES) {
+        throw new Error('L’importazione supererebbe il limite di 500 regole permanenti. Rimuovi alcune regole prima di riprovare; nessun dato è stato modificato.');
+      }
       rulesByText.set(key, { ...rule, text: rule.text.trim() });
       rulesAdded++;
     }
