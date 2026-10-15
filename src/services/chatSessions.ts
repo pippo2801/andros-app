@@ -42,8 +42,9 @@ export function saveDeletedChatSessions(items: DeletedChatSession[]): void {
 }
 
 export function recordDeletedChatSession(id: string): void {
-  if (!id.trim()) return;
-  saveDeletedChatSessions([...loadDeletedChatSessions(), { id, deletedAt: Date.now() }]);
+  const normalizedId = typeof id === 'string' ? id.trim() : '';
+  if (!normalizedId) return;
+  saveDeletedChatSessions([...loadDeletedChatSessions(), { id: normalizedId, deletedAt: Date.now() }]);
 }
 
 export interface ChatSession {
