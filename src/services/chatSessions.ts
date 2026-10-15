@@ -228,6 +228,9 @@ export function updateChatSession(
 }
 
 export function togglePinnedChat(sessions: ChatSession[], id: string): ChatSession[] {
+  if (!Array.isArray(sessions) || typeof id !== 'string' || !id.trim()) {
+    throw new Error('Impossibile fissare la conversazione: elenco o ID non validi.');
+  }
   const target = sessions.find((session) => session.id === id);
   if (!target) return sessions;
   if (!target.pinned && sessions.filter((session) => session.pinned).length >= MAX_PINNED_CHATS) {
@@ -242,6 +245,10 @@ export function deleteChatSession(
   id: string,
   activeId: string,
 ): ChatSessionState {
+  if (!Array.isArray(sessions) || typeof id !== 'string' || !id.trim() ||
+      typeof activeId !== 'string' || !activeId.trim() || !sessions.every(validSession)) {
+    throw new Error('Impossibile eliminare la conversazione: lo stato delle chat non è valido.');
+  }
   const remaining = sessions.filter((session) => session.id !== id);
   const safeSessions = remaining.length ? remaining : [createChatSession()];
   const nextActiveId = activeId === id
