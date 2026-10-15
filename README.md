@@ -10,7 +10,8 @@ Andros OS è un'app Android basata su React, Vite e Capacitor, progettata per re
 - Ollama locale, con scelta tra i modelli già installati.
 - Provider Gemini 2.5 Flash facoltativo, attivabile con una chiave API ottenuta da Google AI Studio. La chiave resta in `sessionStorage`, non viene inserita nei file del repository e viene richiesta nuovamente in una nuova sessione.
 - Strategia AI selezionabile: automatica, solo Ollama oppure Gemini. In modalità automatica Andros privilegia Ollama per il codice e può usare Gemini per altri compiti quando è configurato; in caso di errore locale può ripiegare su Gemini.
-- Archivio locale: importazione JSON, TXT, MD, HTML, CSV e ZIP. Può leggere direttamente gli ZIP ChatGPT che contengono `conversations.json`; supporta CSV con colonne prompt/response e dati testuali generici. Ricerca, ripristino, salvataggio della chat corrente ed esportazione.
+- Archivio locale: importazione JSON, TXT, MD, HTML, CSV e ZIP. Può leggere direttamente gli ZIP ChatGPT che contengono `conversations.json`; supporta CSV con colonne prompt/response e dati testuali generici. Ricerca, ripristino, salvataggio della chat corrente ed esportazione. L’archivio mantiene fino a 300 conversazioni e blocca l’aggiunta oltre il limite per non eliminare dati silenziosamente.
+- Trasferimento manuale tra dispositivi tramite pacchetto JSON: include la chat corrente, l’archivio e le regole approvate; l’importazione convalida il file, unisce i dati e interrompe l’operazione se supererebbe i limiti locali. Non richiede cloud e parte solo quando lo avvii tu.
 - Accesso OAuth Google e backup/sincronizzazione di chat attive, archivio, regole e registro delle chat eliminate tramite un file JSON visibile in Google Drive, dopo la configurazione del progetto OAuth.
 - Collegamenti per aprire ChatGPT, Copilot e Gemini nei rispettivi servizi, senza fingere un accesso alle loro chat private.
 
