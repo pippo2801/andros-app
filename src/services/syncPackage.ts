@@ -1,6 +1,5 @@
 import type { ChatMessageData } from './ollama';
 import {
-  loadArchivedConversations,
   loadArchivedConversationsForSync,
   saveArchivedConversations,
   type ArchivedConversation,
@@ -34,8 +33,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isMessage(value: unknown): value is ChatMessageData {
   return isRecord(value) &&
     (value.role === 'user' || value.role === 'assistant') &&
-    typeof value.content === 'string' &&
-    value.content.length <= 40_000;
+    typeof value.content === 'string';
 }
 
 function isRule(value: unknown): value is SyncRule {
@@ -49,7 +47,7 @@ function isRule(value: unknown): value is SyncRule {
 function isArchivedMessage(value: unknown): value is ArchivedMessage {
   return isRecord(value) &&
     (value.role === 'user' || value.role === 'assistant') &&
-    typeof value.content === 'string' && value.content.length <= 40_000 &&
+    typeof value.content === 'string' &&
     (value.timestamp === undefined || (typeof value.timestamp === 'number' && Number.isFinite(value.timestamp)));
 }
 
@@ -84,7 +82,7 @@ export function createSyncPackage(currentMessages: ChatMessageData[], rules: Syn
     exportedAt: new Date().toISOString(),
     currentMessages: currentMessages.map((message) => ({ ...message })),
     rules: rules.map((rule) => ({ ...rule })),
-    conversations: loadArchivedConversations().filter(isConversation).slice(-MAX_CONVERSATIONS),
+    conversations: loadArchivedConversationsForSync().slice(-MAX_CONVERSATIONS),
   };
   const bytes = new TextEncoder().encode(JSON.stringify(pack)).byteLength;
   if (bytes > MAX_PACKAGE_BYTES) {
