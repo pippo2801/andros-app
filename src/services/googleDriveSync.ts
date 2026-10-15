@@ -18,6 +18,7 @@ export interface AndrosSyncSnapshot {
 
 const APP_DATA_FILENAME = 'andros-os-sync-v1.json';
 const MAX_SYNC_ID_LENGTH = 200;
+const MAX_SYNC_DELETED_SESSIONS = 10_000;
 const MAX_SYNC_TITLE_LENGTH = 200;
 const MAX_SYNC_SOURCE_LENGTH = 100;
 const MAX_SYNC_ARCHIVE_MESSAGES = 20_000;
@@ -262,14 +263,24 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   }
 
   const deletedMap = new Map<string, { id: string; deletedAt: number }>();
-  for (const tombstone of [...(remote?.deletedSessions ?? []), ...(local.deletedSessions ?? [])]) {
+  const tombstones = [...(remote?.deletedSessions ?? []), ...(local.deletedSessions ?? [])];
+  // Bound untrusted remote tombstones before building the merged backup. Fail
+  // closed rather than truncating deletion history and accidentally resurrecting chats.
+  if (tombstones.length > MAX_SYNC_DELETED_SESSIONS * 2) {
+    throw new Error('Il registro delle chat eliminate supera il limite di sicurezza. Nessun backup remoto è stato modificato.');
+  }
+  for (const tombstone of tombstones) {
     if (!tombstone || typeof tombstone.id !== 'string' || !tombstone.id.trim() ||
+        tombstone.id.length > MAX_SYNC_ID_LENGTH || tombstone.id !== tombstone.id.trim() ||
         typeof tombstone.deletedAt !== 'number' || !Number.isFinite(tombstone.deletedAt)) {
       throw new Error('Sincronizzazione interrotta: registro delle chat eliminate non valido. Il backup remoto non è stato sovrascritto.');
     }
-    const id = tombstone.id.trim();
+    const id = tombstone.id;
     const previous = deletedMap.get(id);
     if (!previous || tombstone.deletedAt > previous.deletedAt) deletedMap.set(id, { id, deletedAt: tombstone.deletedAt });
+    if (deletedMap.size > MAX_SYNC_DELETED_SESSIONS) {
+      throw new Error('Il registro delle chat eliminate supera il limite di sicurezza di 10.000 elementi. Nessun backup remoto è stato modificato.');
+    }
   }
   const deletedSessions = [...deletedMap.values()];
   const mergedSessions = mergeById(local.sessions, remote?.sessions ?? [], 'chat');
