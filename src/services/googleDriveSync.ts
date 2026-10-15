@@ -190,11 +190,20 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
     if (!Array.isArray(listed?.files)) {
       throw new Error('Google Drive ha restituito un elenco di backup non valido. La sincronizzazione è stata interrotta.');
     }
-    matchingFiles.push(...listed.files.filter((file: unknown): file is { id: string; name: string; modifiedTime?: string; version?: string } =>
-      Boolean(file && typeof file === 'object' && !Array.isArray(file) &&
-        (file as Record<string, unknown>).name === APP_DATA_FILENAME &&
-        typeof (file as Record<string, unknown>).id === 'string' &&
-        Boolean(((file as Record<string, unknown>).id as string).trim()))));
+    for (const file of listed.files as unknown[]) {
+      if (!file || typeof file !== 'object' || Array.isArray(file)) continue;
+      const entry = file as Record<string, unknown>;
+      if (entry.name !== APP_DATA_FILENAME) continue;
+      if (typeof entry.id !== 'string' || !entry.id.trim()) {
+        throw new Error('Google Drive ha trovato un backup Andros senza ID valido. Per evitare duplicati, la sincronizzazione è stata interrotta.');
+      }
+      matchingFiles.push({
+        id: entry.id,
+        name: APP_DATA_FILENAME,
+        ...(typeof entry.modifiedTime === 'string' ? { modifiedTime: entry.modifiedTime } : {}),
+        ...(typeof entry.version === 'string' ? { version: entry.version } : {}),
+      });
+    }
     pageToken = typeof listed.nextPageToken === 'string' && listed.nextPageToken
       ? listed.nextPageToken
       : undefined;
