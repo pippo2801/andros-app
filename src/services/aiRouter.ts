@@ -57,7 +57,8 @@ export function chooseModelForTask(
   installedModels: string[],
   preferredModel: string,
 ): RouteDecision {
-  const text = normalizeForMatching(prompt);
+  const safePrompt = typeof prompt === 'string' ? prompt : '';
+  const text = normalizeForMatching(safePrompt);
   const has = (category: Exclude<RouteDecision['category'], 'general'>) =>
     TASK_TERMS[category].some((term) => {
       const normalizedTerm = normalizeForMatching(term);
