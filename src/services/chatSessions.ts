@@ -149,8 +149,14 @@ export function loadChatSessionState(): ChatSessionState {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<ChatSessionState>;
       if (Array.isArray(parsed.sessions)) {
+        const seenIds = new Set<string>();
         const sessions = parsed.sessions.filter(validSession)
           .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
+          .filter((session) => {
+            if (seenIds.has(session.id)) return false;
+            seenIds.add(session.id);
+            return true;
+          })
           .map((session, index) => ({ ...session, pinned: index < MAX_PINNED_CHATS && session.pinned }));
         if (sessions.length) {
           const activeId = sessions.some((session) => session.id === parsed.activeId)
