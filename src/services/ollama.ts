@@ -32,6 +32,17 @@ export function getOllamaConfig(): OllamaConfig {
       const model = typeof values.model === 'string' && values.model.trim()
         ? values.model.trim()
         : DEFAULT_CONFIG.model;
+      let parsedEndpoint: URL;
+      try {
+        parsedEndpoint = new URL(endpoint);
+      } catch {
+        return { ...DEFAULT_CONFIG };
+      }
+      if ((parsedEndpoint.protocol !== 'http:' && parsedEndpoint.protocol !== 'https:') ||
+          !parsedEndpoint.hostname || parsedEndpoint.username || parsedEndpoint.password ||
+          parsedEndpoint.search || parsedEndpoint.hash) {
+        return { ...DEFAULT_CONFIG };
+      }
       return { endpoint, model };
     }
   } catch (error) {
