@@ -29,6 +29,7 @@ export function getGeminiApiKey(): string {
 
 export function setGeminiApiKey(key: string): void {
   if (typeof key !== 'string') throw new Error('La chiave Gemini deve essere una stringa.');
+  if (key.trim().length > 512) throw new Error('La chiave Gemini è troppo lunga. Incolla solo la chiave API, senza testo aggiuntivo.');
   try {
     if (key.trim()) sessionStorage.setItem('andros.gemini.api-key.session', key.trim());
     else sessionStorage.removeItem('andros.gemini.api-key.session');
@@ -45,6 +46,7 @@ export async function sendToGemini(
   if (typeof apiKey !== 'string') throw new Error('La chiave Gemini deve essere una stringa.');
   const key = apiKey.trim();
   if (!key) throw new Error('Configura una chiave Gemini API gratuita in Google AI Studio oppure usa Ollama.');
+  if (key.length > 512) throw new Error('La chiave Gemini è troppo lunga. Incolla solo la chiave API, senza testo aggiuntivo.');
   if (!Array.isArray(messages) || !messages.every((message) =>
     message && typeof message === 'object' && !Array.isArray(message) &&
     (message.role === 'user' || message.role === 'assistant') &&
