@@ -119,7 +119,11 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
     pageSize: '100',
   });
   const listed = await request(`${DRIVE_FILES}?${query.toString()}`, token);
-  const existing = Array.isArray(listed?.files) ? listed.files.find((file: any) => file.name === APP_DATA_FILENAME) : undefined;
+  const matchingFiles = Array.isArray(listed?.files) ? listed.files.filter((file: any) => file.name === APP_DATA_FILENAME && typeof file.id === 'string') : [];
+  if (matchingFiles.length > 1) {
+    throw new Error('Sono presenti più backup Andros con lo stesso nome su Google Drive. Per sicurezza la sincronizzazione è stata interrotta: conserva una copia, rinomina o elimina i duplicati e riprova.');
+  }
+  const existing = matchingFiles[0];
   let remote: { archive: unknown[]; rules: unknown[]; sessions: unknown[]; deletedSessions: Array<{ id: string; deletedAt: number }> } | null = null;
   if (existing?.id) {
     // Do not overwrite an existing backup if it cannot be read or validated.
@@ -166,10 +170,11 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   }
   const deletedSessions = [...deletedMap.values()];
   const mergedSessions = mergeById(local.sessions, remote?.sessions ?? [], 'chat');
+  // A deletion is authoritative for that ID. Do not resurrect it because another
+  // device has a skewed clock or continued editing an older copy after deletion.
   const sessions = mergedSessions.filter((session) => {
     const item = session as Record<string, unknown>;
-    const tombstone = deletedMap.get(item.id as string);
-    return !tombstone || recordTimestamp(session) > tombstone.deletedAt;
+    return !deletedMap.has(item.id as string);
   });
 
   const merged: AndrosSyncSnapshot = {
