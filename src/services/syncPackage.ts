@@ -1,6 +1,7 @@
 import type { ChatMessageData } from './ollama';
 import {
   loadArchivedConversations,
+  loadArchivedConversationsForSync,
   saveArchivedConversations,
   type ArchivedConversation,
   type ArchivedMessage,
@@ -133,7 +134,7 @@ export function importAndMergeSyncPackage(pack: SyncPackage): { rulesAdded: numb
       rulesAdded++;
     }
   }
-  const existingArchive = loadArchivedConversations();
+  const existingArchive = loadArchivedConversationsForSync();
   const archiveById = new Map(existingArchive.map((conversation) => [conversation.id, conversation]));
   const importedConversations: ArchivedConversation[] = pack.conversations.map((conversation) => ({ ...conversation, messages: conversation.messages.map((message) => ({ ...message })) }));
   if (pack.currentMessages.length && pack.currentMessages.some((message) => message.content.trim())) {
