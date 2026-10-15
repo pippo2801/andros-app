@@ -309,7 +309,9 @@ export function saveArchivedConversations(conversations: ArchivedConversation[])
   const validMessage = (message: unknown): boolean => {
     if (!message || typeof message !== 'object' || Array.isArray(message)) return false;
     const value = message as Record<string, unknown>;
-    return (value.role === 'user' || value.role === 'assistant') && typeof value.content === 'string';
+    return (value.role === 'user' || value.role === 'assistant') &&
+      typeof value.content === 'string' && value.content.length <= MAX_MESSAGE_LENGTH &&
+      (value.timestamp === undefined || (typeof value.timestamp === 'number' && Number.isFinite(value.timestamp)));
   };
   const validConversation = (item: unknown): item is ArchivedConversation => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
