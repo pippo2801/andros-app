@@ -13,6 +13,11 @@ on:
 permissions:
   contents: read
 
+# Keep only the newest verification for each branch; avoid wasting CI minutes on stale commits.
+concurrency:
+  group: verify-andros-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   web-build:
     name: Verify web app (no APK)
