@@ -160,7 +160,10 @@ export function importAndMergeSyncPackage(pack: SyncPackage): { rulesAdded: numb
   }
 
   const nextRules = [...rulesByText.values()];
-  const nextArchive = [...archiveById.values()].slice(-MAX_CONVERSATIONS);
+  const nextArchive = [...archiveById.values()];
+  if (nextArchive.length > MAX_CONVERSATIONS) {
+    throw new Error('L’importazione supererebbe il limite di 300 conversazioni archiviate. Esporta una copia e rimuovi alcune conversazioni prima di riprovare.');
+  }
   const oldRules = rawRules;
   const oldArchive = localStorage.getItem('andros.archive.conversations.v1');
   try {
