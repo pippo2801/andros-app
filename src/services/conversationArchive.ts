@@ -16,6 +16,10 @@ export interface ArchivedConversation {
 const STORAGE_KEY = 'andros.archive.conversations.v1';
 const MAX_CONVERSATIONS = 300;
 const MAX_MESSAGE_LENGTH = 40_000;
+const MAX_MESSAGES_PER_CONVERSATION = 20_000;
+const MAX_ID_LENGTH = 200;
+const MAX_TITLE_LENGTH = 200;
+const MAX_SOURCE_LENGTH = 100;
 
 function textFromContent(value: unknown): string {
   if (typeof value === 'string') return value;
@@ -277,15 +281,19 @@ export function loadArchivedConversationsForSync(): ArchivedConversation[] {
   const validMessage = (message: unknown): boolean => {
     if (!message || typeof message !== 'object' || Array.isArray(message)) return false;
     const value = message as Record<string, unknown>;
-    return (value.role === 'user' || value.role === 'assistant') && typeof value.content === 'string';
+    return (value.role === 'user' || value.role === 'assistant') &&
+      typeof value.content === 'string' && value.content.length <= MAX_MESSAGE_LENGTH &&
+      (value.timestamp === undefined || (typeof value.timestamp === 'number' && Number.isFinite(value.timestamp)));
   };
   const validConversation = (item: unknown): item is ArchivedConversation => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
     const value = item as Record<string, unknown>;
-    return typeof value.id === 'string' && Boolean(value.id.trim()) &&
-      typeof value.title === 'string' && typeof value.source === 'string' &&
+    return typeof value.id === 'string' && Boolean(value.id.trim()) && value.id.length <= MAX_ID_LENGTH &&
+      typeof value.title === 'string' && value.title.length <= MAX_TITLE_LENGTH &&
+      typeof value.source === 'string' && value.source.length <= MAX_SOURCE_LENGTH &&
       typeof value.importedAt === 'number' && Number.isFinite(value.importedAt) &&
-      Array.isArray(value.messages) && value.messages.every(validMessage);
+      Array.isArray(value.messages) && value.messages.length <= MAX_MESSAGES_PER_CONVERSATION &&
+      value.messages.every(validMessage);
   };
   if (!Array.isArray(parsed) || !parsed.every(validConversation)) {
     throw new Error('L’archivio locale non ha un formato valido. La sincronizzazione è stata interrotta per proteggere il backup.');
@@ -306,10 +314,13 @@ export function saveArchivedConversations(conversations: ArchivedConversation[])
   const validConversation = (item: unknown): item is ArchivedConversation => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
     const value = item as Record<string, unknown>;
-    return typeof value.id === 'string' && Boolean(value.id.trim()) &&
-      typeof value.title === 'string' && typeof value.source === 'string' &&
+    return typeof value.id === 'string' && Boolean(value.id.trim()) && value.id.length <= MAX_ID_LENGTH &&
+      typeof value.title === 'string' && value.title.length <= MAX_TITLE_LENGTH &&
+      typeof value.source === 'string' && value.source.length <= MAX_SOURCE_LENGTH &&
       typeof value.importedAt === 'number' && Number.isFinite(value.importedAt) &&
-      Array.isArray(value.messages) && value.messages.every(validMessage);
+      Array.isArray(value.messages) && value.messages.length <= MAX_MESSAGES_PER_CONVERSATION &&
+      value.messages.every((message) => validMessage(message) &&
+        (message as ArchivedMessage).content.length <= MAX_MESSAGE_LENGTH);
   };
   if (!Array.isArray(conversations) || !conversations.every(validConversation)) {
     throw new Error('L’archivio contiene conversazioni non valide. I dati salvati non sono stati modificati.');
