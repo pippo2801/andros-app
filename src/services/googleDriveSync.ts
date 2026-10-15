@@ -117,21 +117,35 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   const existing = Array.isArray(listed?.files) ? listed.files.find((file: any) => file.name === APP_DATA_FILENAME) : undefined;
   let remote: { archive: unknown[]; rules: unknown[]; sessions: unknown[] } | null = null;
   if (existing?.id) {
+    // Do not overwrite an existing backup if it cannot be read or validated.
+    // A silent fallback to local-only data could erase valid remote records.
+    let downloaded: unknown;
     try {
-      const downloaded = await request(`${DRIVE_FILES}/${encodeURIComponent(existing.id)}?alt=media`, token);
-      const parsed = typeof downloaded === 'string' ? JSON.parse(downloaded) : downloaded;
-      // Read schema 1 backups as well as schema 2; old backups simply have no sessions.
-      if ((parsed?.schema === 1 || parsed?.schema === 2) &&
-          Array.isArray(parsed.archive) && Array.isArray(parsed.rules)) {
-        remote = {
-          archive: parsed.archive,
-          rules: parsed.rules,
-          sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
-        };
-      }
-    } catch {
-      // A malformed remote backup is never allowed to replace local data.
+      downloaded = await request(`${DRIVE_FILES}/${encodeURIComponent(existing.id)}?alt=media`, token);
+    } catch (cause) {
+      throw new Error(cause instanceof Error
+        ? `Impossibile leggere il backup Google Drive; nessun dato remoto è stato sovrascritto. ${cause.message}`
+        : 'Impossibile leggere il backup Google Drive; nessun dato remoto è stato sovrascritto.');
     }
+
+    let parsed: any;
+    try {
+      parsed = typeof downloaded === 'string' ? JSON.parse(downloaded) : downloaded;
+    } catch {
+      throw new Error('Il backup Google Drive contiene JSON non valido. Per sicurezza non è stato sovrascritto.');
+    }
+
+    // Read schema 1 backups as well as schema 2; old backups simply have no sessions.
+    if (!parsed || (parsed.schema !== 1 && parsed.schema !== 2) ||
+        !Array.isArray(parsed.archive) || !Array.isArray(parsed.rules) ||
+        (parsed.sessions !== undefined && !Array.isArray(parsed.sessions))) {
+      throw new Error('Il backup Google Drive ha un formato non riconosciuto. Per sicurezza non è stato sovrascritto.');
+    }
+    remote = {
+      archive: parsed.archive,
+      rules: parsed.rules,
+      sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
+    };
   }
 
   const merged: AndrosSyncSnapshot = {
