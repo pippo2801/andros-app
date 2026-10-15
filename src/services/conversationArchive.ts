@@ -248,7 +248,15 @@ export function loadArchivedConversations(): ArchivedConversation[] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((item): item is ArchivedConversation =>
-      item && typeof item.id === 'string' && typeof item.title === 'string' && Array.isArray(item.messages));
+      Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
+        typeof item.id === 'string' && item.id.trim() &&
+        typeof item.title === 'string' && typeof item.source === 'string' &&
+        typeof item.importedAt === 'number' && Number.isFinite(item.importedAt) &&
+        Array.isArray(item.messages) && item.messages.every((message: unknown) =>
+          Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
+            ((message as Record<string, unknown>).role === 'user' ||
+             (message as Record<string, unknown>).role === 'assistant') &&
+            typeof (message as Record<string, unknown>).content === 'string'))));
   } catch {
     return [];
   }
