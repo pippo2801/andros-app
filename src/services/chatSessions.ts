@@ -23,12 +23,13 @@ export function loadDeletedChatSessions(): DeletedChatSession[] {
       typeof item.deletedAt === 'number' && Number.isFinite(item.deletedAt)))) {
     throw new Error('Il registro locale delle chat eliminate non è valido. Per sicurezza la sincronizzazione è stata interrotta.');
   }
-  return parsed as DeletedChatSession[];
+  return (parsed as DeletedChatSession[]).map((item) => ({ id: item.id.trim(), deletedAt: item.deletedAt }));
 }
 
 export function saveDeletedChatSessions(items: DeletedChatSession[]): void {
   if (!Array.isArray(items) || !items.every((item) =>
-    Boolean(item && typeof item.id === 'string' && item.id.trim() &&
+    Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
+      typeof item.id === 'string' && item.id.trim() &&
       typeof item.deletedAt === 'number' && Number.isFinite(item.deletedAt)))) {
     throw new Error('Il registro delle chat eliminate contiene dati non validi. I dati esistenti non sono stati modificati.');
   }
