@@ -217,9 +217,16 @@ export function updateChatSession(
   id: string,
   messages: ChatMessageData[],
 ): ChatSession[] {
-  if (!Array.isArray(sessions) || typeof id !== 'string' || !id.trim() ||
+  if (!Array.isArray(sessions) || !sessions.length || !sessions.every(validSession) ||
+      typeof id !== 'string' || !id.trim() ||
       !Array.isArray(messages) || !messages.every(isMessage)) {
-    throw new Error('Impossibile aggiornare la conversazione: ID o messaggi non validi.');
+    throw new Error('Impossibile aggiornare la conversazione: elenco, ID o messaggi non validi.');
+  }
+  if (new Set(sessions.map((session) => session.id)).size !== sessions.length) {
+    throw new Error('Impossibile aggiornare la conversazione: l’elenco contiene ID duplicati.');
+  }
+  if (!sessions.some((session) => session.id === id)) {
+    throw new Error('Impossibile aggiornare la conversazione: la chat selezionata non esiste più.');
   }
   const safeMessages = messages.map((message) => ({ ...message }));
   const now = Date.now();
@@ -236,8 +243,12 @@ export function updateChatSession(
 }
 
 export function togglePinnedChat(sessions: ChatSession[], id: string): ChatSession[] {
-  if (!Array.isArray(sessions) || typeof id !== 'string' || !id.trim()) {
+  if (!Array.isArray(sessions) || !sessions.length || !sessions.every(validSession) ||
+      typeof id !== 'string' || !id.trim()) {
     throw new Error('Impossibile fissare la conversazione: elenco o ID non validi.');
+  }
+  if (new Set(sessions.map((session) => session.id)).size !== sessions.length) {
+    throw new Error('Impossibile fissare la conversazione: l’elenco contiene ID duplicati.');
   }
   const target = sessions.find((session) => session.id === id);
   if (!target) return sessions;
@@ -266,8 +277,15 @@ export function deleteChatSession(
 }
 
 export function renameChatSession(sessions: ChatSession[], id: string, title: string): ChatSession[] {
-  if (!Array.isArray(sessions) || typeof id !== 'string' || !id.trim() || typeof title !== 'string') {
-    throw new Error('ID o titolo della conversazione non validi.');
+  if (!Array.isArray(sessions) || !sessions.length || !sessions.every(validSession) ||
+      typeof id !== 'string' || !id.trim() || typeof title !== 'string') {
+    throw new Error('Elenco, ID o titolo della conversazione non validi.');
+  }
+  if (new Set(sessions.map((session) => session.id)).size !== sessions.length) {
+    throw new Error('Impossibile rinominare la conversazione: l’elenco contiene ID duplicati.');
+  }
+  if (!sessions.some((session) => session.id === id)) {
+    throw new Error('Impossibile rinominare la conversazione: la chat selezionata non esiste più.');
   }
   const normalized = title.trim().replace(/\s+/g, ' ').slice(0, 80);
   if (!normalized) throw new Error('Il titolo della conversazione non può essere vuoto.');
