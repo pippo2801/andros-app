@@ -49,6 +49,9 @@ export async function sendToGemini(
     typeof message.content === 'string')) {
     throw new Error('La cronologia contiene messaggi non validi. Controlla la conversazione e riprova.');
   }
+  if (!Array.isArray(approvedRules) || !approvedRules.every((rule) => typeof rule === 'string')) {
+    throw new Error('Le regole permanenti non hanno un formato valido. Controllale nelle impostazioni.');
+  }
   const firstUserMessage = messages.findIndex((message) => message.role === 'user');
   if (firstUserMessage < 0) {
     throw new Error('La conversazione non contiene ancora un messaggio utente da inviare a Gemini.');
