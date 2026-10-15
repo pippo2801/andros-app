@@ -138,6 +138,9 @@ export async function sendToOllama(
     throw new Error('Le regole permanenti non hanno un formato valido. Controllale nelle impostazioni.');
   }
   const config = getOllamaConfig();
+  if (modelOverride !== undefined && typeof modelOverride !== 'string') {
+    throw new Error('Il modello selezionato non è valido. Controlla le impostazioni.');
+  }
   const model = modelOverride?.trim() || config.model;
   if (!model) throw new Error('Seleziona un modello Ollama nelle impostazioni.');
 
