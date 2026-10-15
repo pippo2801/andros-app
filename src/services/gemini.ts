@@ -44,7 +44,8 @@ export async function sendToGemini(
   const key = apiKey.trim();
   if (!key) throw new Error('Configura una chiave Gemini API gratuita in Google AI Studio oppure usa Ollama.');
   if (!Array.isArray(messages) || !messages.every((message) =>
-    message && (message.role === 'user' || message.role === 'assistant') &&
+    message && typeof message === 'object' && !Array.isArray(message) &&
+    (message.role === 'user' || message.role === 'assistant') &&
     typeof message.content === 'string')) {
     throw new Error('La cronologia contiene messaggi non validi. Controlla la conversazione e riprova.');
   }
