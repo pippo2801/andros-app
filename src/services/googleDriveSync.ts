@@ -115,12 +115,12 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   const query = new URLSearchParams({
     spaces: 'drive',
     q: `name='${APP_DATA_FILENAME}' and trashed=false`,
-    fields: 'files(id,name,modifiedTime)',
+    fields: 'files(id,name,modifiedTime,version)',
     pageSize: '100',
   });
   // Follow every Drive results page before deciding whether a backup is unique.
   // Looking only at page one could miss duplicate files and update the wrong backup.
-  const matchingFiles: Array<{ id: string; name: string }> = [];
+  const matchingFiles: Array<{ id: string; name: string; modifiedTime?: string; version?: string }> = [];
   let pageToken: string | undefined;
   do {
     if (pageToken) query.set('pageToken', pageToken);
@@ -201,6 +201,17 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   };
   const body = JSON.stringify(merged);
   if (existing?.id) {
+    // Optimistic concurrency check: don't overwrite if another device changed
+    // the backup while this device was downloading and merging it.
+    const latest = await request(
+      `${DRIVE_FILES}/${encodeURIComponent(existing.id)}?fields=id,modifiedTime,version`,
+      token,
+    );
+    if (!latest || latest.id !== existing.id ||
+        (existing.version !== undefined && String(latest.version) !== String(existing.version)) ||
+        (existing.modifiedTime !== undefined && latest.modifiedTime !== existing.modifiedTime)) {
+      throw new Error('Un altro dispositivo ha modificato il backup durante la sincronizzazione. Nessun aggiornamento è stato inviato: premi Sincronizza di nuovo per unire i dati più recenti.');
+    }
     await request(`${UPLOAD_FILES}/${encodeURIComponent(existing.id)}?uploadType=media`, token, 'PATCH', body);
   } else {
     const boundary = `andros_${Date.now()}_boundary`;
