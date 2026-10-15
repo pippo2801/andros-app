@@ -129,12 +129,19 @@ export default function Index() {
   };
 
   const handleDeleteChat = (id: string) => {
-    // Save a tombstone so this deletion can be propagated to other devices.
-    recordDeletedChatSession(id);
-    const next = deleteChatSession(sessions, id, activeChatId);
-    setSessions(next.sessions);
-    setActiveChatId(next.activeId);
-    setNotice('Conversazione eliminata.');
+    try {
+      // Persist the tombstone first: never remove a chat if its deletion cannot be synced safely.
+      recordDeletedChatSession(id);
+      const next = deleteChatSession(sessions, id, activeChatId);
+      setSessions(next.sessions);
+      setActiveChatId(next.activeId);
+      setNotice('Conversazione eliminata.');
+    } catch (error) {
+      console.warn('Impossibile registrare l’eliminazione della conversazione:', error);
+      setNotice(error instanceof Error
+        ? `Conversazione non eliminata: ${error.message}`
+        : 'Conversazione non eliminata: impossibile salvare il registro delle cancellazioni.');
+    }
   };
 
   const handleRenameChat = (id: string, title: string) => {
