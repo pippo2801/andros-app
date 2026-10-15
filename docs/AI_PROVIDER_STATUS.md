@@ -16,7 +16,7 @@ Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codi
 
 - [x] Il codice della sincronizzazione ora include chat attive, archivio conversazioni e regole permanenti nel file Andros su Drive.
 - [x] Il merge usa gli ID e i timestamp disponibili; in caso di parità o timestamp assente privilegia la copia locale. I backup degli schemi 1 e 2 vengono letti e migrati allo schema 3 al successivo salvataggio.
-- [x] Le chat eliminate generano tombstone locali persistenti e il registro viene incluso nel backup Drive; la sincronizzazione filtra le chat eliminate in base al timestamp. È una protezione implementata nel codice, non ancora validata con due dispositivi reali.
+- [x] Le chat eliminate generano tombstone locali persistenti e il registro viene incluso nel backup Drive; la sincronizzazione tratta la cancellazione come autoritativa per quell'ID, evitando la ricomparsa anche se un altro dispositivo conserva una copia modificata dopo l'eliminazione. Se trova più file di backup con lo stesso nome su Drive, interrompe la sincronizzazione invece di sceglierne uno arbitrariamente. È una protezione implementata nel codice, non ancora validata con due dispositivi reali.
 - [ ] **Test reale OAuth/Drive**: non ancora verificato con un Client ID OAuth Android valido e un account Google.
 - [ ] **Test delle cancellazioni tra dispositivi**: provare su due dispositivi login, sincronizzazione, eliminazione offline e sincronizzazione successiva; verificare anche conflitti e recupero da interruzioni.
 - [ ] **Limiti di spazio e grandi archivi**: testare dimensioni, errori di quota e recupero dopo interruzioni prima di affidarsi alla sincronizzazione come unico backup.
