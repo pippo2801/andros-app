@@ -46,10 +46,10 @@ function loadMemoryRules(): MemoryRule[] {
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
       (item): item is MemoryRule =>
-        item &&
-        typeof item.id === 'string' &&
-        typeof item.text === 'string' &&
-        typeof item.createdAt === 'number',
+        item && typeof item === 'object' && !Array.isArray(item) &&
+        typeof item.id === 'string' && item.id.trim().length > 0 &&
+        typeof item.text === 'string' && item.text.trim().length > 0 &&
+        typeof item.createdAt === 'number' && Number.isFinite(item.createdAt),
     );
   } catch (error) {
     console.warn('Regole permanenti non disponibili:', error);
