@@ -254,25 +254,40 @@ export function loadArchivedConversationsForSync(): ArchivedConversation[] {
   } catch {
     throw new Error('L’archivio locale è danneggiato. La sincronizzazione è stata interrotta per evitare di sovrascrivere il backup con un archivio vuoto.');
   }
-  if (!Array.isArray(parsed) || !parsed.every((item) =>
-    Boolean(item && typeof item === 'object' &&
-      typeof item.id === 'string' && typeof item.title === 'string' &&
-      Array.isArray(item.messages)))) {
+  const validMessage = (message: unknown): boolean => {
+    if (!message || typeof message !== 'object' || Array.isArray(message)) return false;
+    const value = message as Record<string, unknown>;
+    return (value.role === 'user' || value.role === 'assistant') && typeof value.content === 'string';
+  };
+  const validConversation = (item: unknown): item is ArchivedConversation => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+    const value = item as Record<string, unknown>;
+    return typeof value.id === 'string' && Boolean(value.id.trim()) &&
+      typeof value.title === 'string' && typeof value.source === 'string' &&
+      typeof value.importedAt === 'number' && Number.isFinite(value.importedAt) &&
+      Array.isArray(value.messages) && value.messages.every(validMessage);
+  };
+  if (!Array.isArray(parsed) || !parsed.every(validConversation)) {
     throw new Error('L’archivio locale non ha un formato valido. La sincronizzazione è stata interrotta per proteggere il backup.');
   }
-  return parsed as ArchivedConversation[];
+  return parsed;
 }
 
 export function saveArchivedConversations(conversations: ArchivedConversation[]): void {
-  if (!Array.isArray(conversations) || !conversations.every((item) =>
-    Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
-      typeof item.id === 'string' && item.id.trim() &&
-      typeof item.title === 'string' && typeof item.source === 'string' &&
-      typeof item.importedAt === 'number' && Number.isFinite(item.importedAt) &&
-      Array.isArray(item.messages) && item.messages.every((message) =>
-        Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
-          (message.role === 'user' || message.role === 'assistant') &&
-          typeof message.content === 'string'))))) {
+  const validMessage = (message: unknown): boolean => {
+    if (!message || typeof message !== 'object' || Array.isArray(message)) return false;
+    const value = message as Record<string, unknown>;
+    return (value.role === 'user' || value.role === 'assistant') && typeof value.content === 'string';
+  };
+  const validConversation = (item: unknown): item is ArchivedConversation => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+    const value = item as Record<string, unknown>;
+    return typeof value.id === 'string' && Boolean(value.id.trim()) &&
+      typeof value.title === 'string' && typeof value.source === 'string' &&
+      typeof value.importedAt === 'number' && Number.isFinite(value.importedAt) &&
+      Array.isArray(value.messages) && value.messages.every(validMessage);
+  };
+  if (!Array.isArray(conversations) || !conversations.every(validConversation)) {
     throw new Error('L’archivio contiene conversazioni non valide. I dati salvati non sono stati modificati.');
   }
   const bounded = conversations.slice(-MAX_CONVERSATIONS);
