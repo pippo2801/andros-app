@@ -23,6 +23,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const results = useMemo(() => searchArchivedConversations(conversations, query), [conversations, query]);
@@ -58,7 +59,8 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
   };
 
   const importFiles = async (files: FileList | null) => {
-    if (!files?.length) return;
+    if (!files?.length || busy) return;
+    setBusy(true);
     setError('');
     setStatus('');
     let imported = 0;
@@ -79,6 +81,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
       setError(cause instanceof Error ? cause.message : 'Importazione non riuscita.');
     } finally {
       if (fileRef.current) fileRef.current.value = '';
+      setBusy(false);
     }
   };
 
@@ -131,11 +134,11 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
 
         <div className="space-y-3 border-b border-white/[0.08] p-4 sm:p-5">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white hover:brightness-110"><Upload size={16} /> Importa chat</button>
-            <button type="button" onClick={saveCurrentConversation} className="flex items-center justify-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-3 text-sm font-medium text-cyan-100 hover:bg-cyan-400/[0.12]"><MessageSquareText size={16} /> Salva chat corrente</button>
-            <button type="button" onClick={exportAll} disabled={!conversations.length} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-medium text-slate-200 hover:bg-white/10 disabled:opacity-40"><Download size={16} /> Esporta archivio</button>
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-3 text-sm font-semibold text-white hover:brightness-110"><Upload size={16} /> Importa chat</button>
+            <button type="button" onClick={saveCurrentConversation} disabled={busy} className="flex items-center justify-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-3 text-sm font-medium text-cyan-100 hover:bg-cyan-400/[0.12]"><MessageSquareText size={16} /> Salva chat corrente</button>
+            <button type="button" onClick={exportAll} disabled={busy || !conversations.length} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-medium text-slate-200 hover:bg-white/10 disabled:opacity-40"><Download size={16} /> Esporta archivio</button>
           </div>
-          <input ref={fileRef} type="file" accept=".zip,.json,.txt,.md,.html,.htm,.csv,application/zip,application/json,text/plain,text/html" multiple className="hidden" onChange={(event) => void importFiles(event.target.files)} />
+          <input ref={fileRef} type="file" disabled={busy} accept=".zip,.json,.txt,.md,.html,.htm,.csv,application/zip,application/json,text/plain,text/html" multiple className="hidden" onChange={(event) => void importFiles(event.target.files)} />
           <p className="text-[11px] leading-4 text-slate-500">Formati: ZIP (max 100 MB), JSON, TXT, MD, HTML e CSV (max 5 MB per file). Puoi caricare direttamente lo ZIP di ChatGPT; per Gemini, esporta i dati con Google Takeout. I formati variano in base al servizio.</p>
           <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 focus-within:border-cyan-400/40">
             <Search size={17} className="shrink-0 text-slate-500" />
