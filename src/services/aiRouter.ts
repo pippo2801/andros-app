@@ -72,7 +72,9 @@ export function chooseModelForTask(
   else if (has('writing')) category = 'writing';
 
   const models = Array.isArray(installedModels)
-    ? installedModels.filter((model): model is string => typeof model === 'string' && model.trim().length > 0)
+    ? [...new Set(installedModels
+        .filter((model): model is string => typeof model === 'string' && model.trim().length > 0)
+        .map((model) => model.trim()))]
     : [];
   const matches = (model: string, patterns: RegExp[]) => patterns.some((pattern) => pattern.test(model));
   const preference = typeof preferredModel === 'string' ? preferredModel.trim() : '';
