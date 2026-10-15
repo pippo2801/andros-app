@@ -118,8 +118,22 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
     fields: 'files(id,name,modifiedTime)',
     pageSize: '100',
   });
-  const listed = await request(`${DRIVE_FILES}?${query.toString()}`, token);
-  const matchingFiles = Array.isArray(listed?.files) ? listed.files.filter((file: any) => file.name === APP_DATA_FILENAME && typeof file.id === 'string') : [];
+  // Follow every Drive results page before deciding whether a backup is unique.
+  // Looking only at page one could miss duplicate files and update the wrong backup.
+  const matchingFiles: Array<{ id: string; name: string }> = [];
+  let pageToken: string | undefined;
+  do {
+    if (pageToken) query.set('pageToken', pageToken);
+    const listed = await request(`${DRIVE_FILES}?${query.toString()}`, token);
+    if (!Array.isArray(listed?.files)) {
+      throw new Error('Google Drive ha restituito un elenco di backup non valido. La sincronizzazione è stata interrotta.');
+    }
+    matchingFiles.push(...listed.files.filter((file: any) =>
+      file.name === APP_DATA_FILENAME && typeof file.id === 'string'));
+    pageToken = typeof listed.nextPageToken === 'string' && listed.nextPageToken
+      ? listed.nextPageToken
+      : undefined;
+  } while (pageToken);
   if (matchingFiles.length > 1) {
     throw new Error('Sono presenti più backup Andros con lo stesso nome su Google Drive. Per sicurezza la sincronizzazione è stata interrotta: conserva una copia, rinomina o elimina i duplicati e riprova.');
   }
