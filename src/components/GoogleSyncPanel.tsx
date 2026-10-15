@@ -149,7 +149,7 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
   };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(event) => { if (!busy && event.target === event.currentTarget) onClose(); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="google-sync-title" className="w-full max-w-lg rounded-t-3xl border border-white/10 bg-[#0b1120] p-5 shadow-2xl sm:rounded-3xl sm:p-6">
         <header className="mb-5 flex items-start justify-between gap-3">
           <div>
@@ -157,7 +157,7 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
             <h2 id="google-sync-title" className="text-lg font-semibold text-white">Account Google e sincronizzazione</h2>
             <p className="mt-1 text-sm leading-5 text-slate-400">File di sincronizzazione visibile in Google Drive, che puoi controllare ed eliminare.</p>
           </div>
-          <button type="button" aria-label="Chiudi" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white"><X size={19} /></button>
+          <button type="button" aria-label="Chiudi" onClick={onClose} disabled={busy} className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white disabled:opacity-40"><X size={19} /></button>
         </header>
         <div className="space-y-4">
           <label className="block">
