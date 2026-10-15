@@ -21,6 +21,7 @@ import {
 import {
   createChatSession,
   deleteChatSession,
+  recordDeletedChatSession,
   loadChatSessionState,
   renameChatSession,
   saveChatSessionState,
@@ -128,6 +129,8 @@ export default function Index() {
   };
 
   const handleDeleteChat = (id: string) => {
+    // Save a tombstone so this deletion can be propagated to other devices.
+    recordDeletedChatSession(id);
     const next = deleteChatSession(sessions, id, activeChatId);
     setSessions(next.sessions);
     setActiveChatId(next.activeId);
