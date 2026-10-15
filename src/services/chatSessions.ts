@@ -18,7 +18,7 @@ export function loadDeletedChatSessions(): DeletedChatSession[] {
     throw new Error('Il registro locale delle chat eliminate è danneggiato. Per evitare che ricompaiano conversazioni eliminate, la sincronizzazione è stata interrotta.');
   }
   if (!Array.isArray(parsed) || !parsed.every((item) =>
-    Boolean(item && typeof item === 'object' &&
+    Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
       typeof item.id === 'string' && item.id.trim() &&
       typeof item.deletedAt === 'number' && Number.isFinite(item.deletedAt)))) {
     throw new Error('Il registro locale delle chat eliminate non è valido. Per sicurezza la sincronizzazione è stata interrotta.');
@@ -35,8 +35,9 @@ export function saveDeletedChatSessions(items: DeletedChatSession[]): void {
 
   const latest = new Map<string, DeletedChatSession>();
   for (const item of items) {
-    const previous = latest.get(item.id);
-    if (!previous || item.deletedAt > previous.deletedAt) latest.set(item.id, item);
+    const id = item.id.trim();
+    const previous = latest.get(id);
+    if (!previous || item.deletedAt > previous.deletedAt) latest.set(id, { id, deletedAt: item.deletedAt });
   }
   localStorage.setItem(DELETED_CHAT_SESSIONS_KEY, JSON.stringify([...latest.values()]));
 }
@@ -91,11 +92,15 @@ export function makeChatTitle(messages: ChatMessageData[]): string {
 }
 
 export function createChatSession(messages: ChatMessageData[] = [WELCOME_MESSAGE]): ChatSession {
+  if (!Array.isArray(messages) || !messages.every(isMessage)) {
+    throw new Error('Impossibile creare la conversazione: i messaggi non sono validi.');
+  }
+  const safeMessages = messages.map((message) => ({ ...message }));
   const now = Date.now();
   return {
     id: `andros-chat-${now}-${Math.random().toString(36).slice(2, 9)}`,
-    title: makeChatTitle(messages),
-    messages: [...messages],
+    title: makeChatTitle(safeMessages),
+    messages: safeMessages,
     createdAt: now,
     updatedAt: now,
     pinned: false,
@@ -177,7 +182,7 @@ export function loadChatSessionState(): ChatSessionState {
 }
 
 export function saveChatSessionState(state: ChatSessionState): void {
-  if (!state || typeof state.activeId !== 'string' || !Array.isArray(state.sessions) ||
+  if (!state || typeof state.activeId !== 'string' || !state.activeId.trim() || !Array.isArray(state.sessions) ||
       state.sessions.length === 0 || !state.sessions.every(validSession)) {
     throw new Error('Lo stato delle conversazioni non è valido. I dati salvati non sono stati modificati.');
   }
@@ -197,13 +202,18 @@ export function updateChatSession(
   id: string,
   messages: ChatMessageData[],
 ): ChatSession[] {
+  if (!Array.isArray(sessions) || typeof id !== 'string' || !id.trim() ||
+      !Array.isArray(messages) || !messages.every(isMessage)) {
+    throw new Error('Impossibile aggiornare la conversazione: ID o messaggi non validi.');
+  }
+  const safeMessages = messages.map((message) => ({ ...message }));
   const now = Date.now();
   return sessions.map((session) => session.id !== id ? session : {
     ...session,
-    messages: [...messages],
-    title: messages.some((message) => message.role === 'user')
+    messages: safeMessages,
+    title: safeMessages.some((message) => message.role === 'user')
       ? (session.title === 'Nuova conversazione' || session.messages.every((message) => message.role !== 'user')
-          ? makeChatTitle(messages)
+          ? makeChatTitle(safeMessages)
           : session.title)
       : 'Nuova conversazione',
     updatedAt: now,
@@ -234,6 +244,9 @@ export function deleteChatSession(
 }
 
 export function renameChatSession(sessions: ChatSession[], id: string, title: string): ChatSession[] {
+  if (!Array.isArray(sessions) || typeof id !== 'string' || !id.trim() || typeof title !== 'string') {
+    throw new Error('ID o titolo della conversazione non validi.');
+  }
   const normalized = title.trim().replace(/\s+/g, ' ').slice(0, 80);
   if (!normalized) throw new Error('Il titolo della conversazione non può essere vuoto.');
   return sessions.map((session) => session.id === id
