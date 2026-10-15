@@ -72,13 +72,13 @@ function isMessage(value: unknown): value is ChatMessageData {
 }
 
 function validSession(value: unknown): value is ChatSession {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const item = value as Record<string, unknown>;
-  return typeof item.id === 'string' &&
+  return typeof item.id === 'string' && Boolean(item.id.trim()) &&
     typeof item.title === 'string' &&
     Array.isArray(item.messages) && item.messages.every(isMessage) &&
-    typeof item.createdAt === 'number' &&
-    typeof item.updatedAt === 'number' &&
+    typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) &&
+    typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) &&
     typeof item.pinned === 'boolean';
 }
 
@@ -172,6 +172,14 @@ export function loadChatSessionState(): ChatSessionState {
 }
 
 export function saveChatSessionState(state: ChatSessionState): void {
+  if (!state || typeof state.activeId !== 'string' || !Array.isArray(state.sessions) ||
+      state.sessions.length === 0 || !state.sessions.every(validSession)) {
+    throw new Error('Le stato delle conversazioni non è valido. I dati salvati non sono stati modificati.');
+  }
+  const ids = new Set(state.sessions.map((session) => session.id));
+  if (ids.size !== state.sessions.length || !ids.has(state.activeId)) {
+    throw new Error('Le conversazioni contengono ID duplicati o una chat attiva inesistente. I dati salvati non sono stati modificati.');
+  }
   const sessions = state.sessions
     .slice()
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
