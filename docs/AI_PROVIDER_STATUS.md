@@ -12,11 +12,19 @@ Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codi
 - [ ] **Immagini in ingresso**: implementazione presente nella PR #27 (`feat/image-attachments`), ma la PR è ancora aperta e in bozza; non va considerata integrata in `main` finché non viene verificata e unita.
 - [ ] **Generazione/modifica immagini**: non è la stessa cosa dell'allegare un'immagine alla chat; resta un modulo distinto.
 
+## Sincronizzazione Google Drive
+
+- [x] Il codice della sincronizzazione ora include chat attive, archivio conversazioni e regole permanenti nel file Andros su Drive.
+- [x] Il merge usa gli ID e i timestamp disponibili; in caso di parità o timestamp assente privilegia la copia locale. I backup precedenti di schema 1 vengono letti e migrati al formato schema 2 al successivo salvataggio.
+- [ ] **Test reale OAuth/Drive**: non ancora verificato con un Client ID OAuth Android valido e un account Google.
+- [ ] **Conflitti e cancellazioni tra dispositivi**: la fusione evita duplicati, ma non implementa tombstone per propagare le cancellazioni; una voce rimossa da un dispositivo può ricomparire dal backup remoto.
+- [ ] **Limiti di spazio e grandi archivi**: testare dimensioni, errori di quota e recupero dopo interruzioni prima di affidarsi alla sincronizzazione come unico backup.
+
 ## CI e creazione APK
 
 - [x] Il workflow `.github/workflows/build-apk.yml` è manuale (`workflow_dispatch`): i normali commit non devono creare APK.
-- [x] Il workflow `.github/workflows/verify.yml` esegue `npm install` e `npm run build` senza compilare APK, per controllare le modifiche web.
-- [x] La verifica web CI è riuscita sul commit `d14f50553580e9da904de90d3e344c11ec149554`: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38734028580).
+- [x] Il workflow `.github/workflows/verify.yml` esegue `npm install` e `npm run build` senza compilare APK.
+- [x] La build web è riuscita sul commit più recente `49252c38de8a8e6275a8ca506c242331afd6fa87`: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38734420175).
 - [ ] **Debito tecnico**: `package.json` e `package-lock.json` non sono sincronizzati. Per questo il workflow usa temporaneamente `npm install` invece di `npm ci`; la correzione definitiva del lockfile resta da fare.
 - [ ] La compilazione Android e il test sul POCO restano verifiche distinte, da eseguire quando richiesto.
 
