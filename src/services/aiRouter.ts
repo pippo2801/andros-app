@@ -4,9 +4,43 @@ export interface RouteDecision {
   category: 'coding' | 'reasoning' | 'writing' | 'general' | 'vision';
 }
 
+const TASK_TERMS: Record<RouteDecision['category'], string[]> = {
+  vision: [
+    'immagine', 'immagini', 'foto', 'fotografia', 'screenshot', 'vision',
+    'analizza questa figura', 'image', 'images', 'photo', 'picture',
+    'screenshot of', 'look at this', 'what is in this image', 'imagen', 'foto de',
+  ],
+  coding: [
+    'codice', 'programma', 'programmazione', 'python', 'javascript',
+    'typescript', 'react', 'bug', 'errore', 'debug', 'apk', 'android',
+    'gradle', 'git', 'script', 'funzione', 'classe', 'compila',
+    'code', 'coding', 'programming', 'debugging', 'compile', 'compiler',
+    'repository', 'pull request', 'unit test', 'function', 'typescript',
+    'javascript', 'build an app', 'write a script', 'stack trace',
+  ],
+  reasoning: [
+    'dimostra', 'confronta', 'analizza', 'ragiona', 'pro e contro',
+    'strategia', 'piano', 'perché', 'spiegami in dettaglio', 'valuta',
+    'reason', 'reasoning', 'compare', 'analyze', 'analyse', 'pros and cons',
+    'strategy', 'plan', 'why does', 'explain in detail', 'evaluate',
+    'think through', 'trade-off', 'tradeoff',
+  ],
+  writing: [
+    'scrivi', 'riscrivi', 'email', 'messaggio', 'articolo', 'riassumi',
+    'traduci', 'correggi il testo', 'descrizione', 'write', 'rewrite',
+    'draft', 'summarize', 'summary', 'translate', 'proofread', 'essay',
+    'email', 'message', 'article', 'description', 'make this clearer',
+  ],
+  general: [],
+};
+
 /**
- * A deterministic, free-first router for models already installed in Ollama.
- * It never sends a prompt to a paid provider or uploads it to a third party.
+ * Deterministic, free-first routing for models already installed in Ollama.
+ * It does not contact a cloud provider or transmit prompts.
+ *
+ * This is keyword-based routing, not semantic intent detection. When a task
+ * could fit multiple categories, the priority is vision, coding, reasoning,
+ * then writing; otherwise the preferred/first installed model is used.
  */
 export function chooseModelForTask(
   prompt: string,
@@ -14,18 +48,14 @@ export function chooseModelForTask(
   preferredModel: string,
 ): RouteDecision {
   const text = prompt.toLocaleLowerCase();
-  const has = (...terms: string[]) => terms.some((term) => text.includes(term));
-  let category: RouteDecision['category'] = 'general';
+  const has = (category: Exclude<RouteDecision['category'], 'general'>) =>
+    TASK_TERMS[category].some((term) => text.includes(term));
 
-  if (has('immagine', 'foto', 'screenshot', 'immagini', 'vision', 'analizza questa figura')) {
-    category = 'vision';
-  } else if (has('codice', 'programma', 'programmazione', 'python', 'javascript', 'typescript', 'react', 'bug', 'errore', 'debug', 'apk', 'android', 'gradle', 'git', 'script', 'funzione', 'classe', 'compila')) {
-    category = 'coding';
-  } else if (has('dimostra', 'confronta', 'analizza', 'ragiona', 'pro e contro', 'strategia', 'piano', 'perché', 'spiegami in dettaglio', 'valuta')) {
-    category = 'reasoning';
-  } else if (has('scrivi', 'riscrivi', 'email', 'messaggio', 'articolo', 'riassumi', 'traduci', 'correggi il testo', 'descrizione')) {
-    category = 'writing';
-  }
+  let category: RouteDecision['category'] = 'general';
+  if (has('vision')) category = 'vision';
+  else if (has('coding')) category = 'coding';
+  else if (has('reasoning')) category = 'reasoning';
+  else if (has('writing')) category = 'writing';
 
   const models = installedModels.filter((model) => typeof model === 'string' && model.trim());
   const matches = (model: string, patterns: RegExp[]) => patterns.some((pattern) => pattern.test(model));
