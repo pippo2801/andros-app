@@ -264,9 +264,18 @@ export function deleteChatSession(
   id: string,
   activeId: string,
 ): ChatSessionState {
-  if (!Array.isArray(sessions) || typeof id !== 'string' || !id.trim() ||
+  if (!Array.isArray(sessions) || !sessions.length || typeof id !== 'string' || !id.trim() ||
       typeof activeId !== 'string' || !activeId.trim() || !sessions.every(validSession)) {
     throw new Error('Impossibile eliminare la conversazione: lo stato delle chat non è valido.');
+  }
+  if (new Set(sessions.map((session) => session.id)).size !== sessions.length) {
+    throw new Error('Impossibile eliminare la conversazione: l’elenco contiene ID duplicati.');
+  }
+  if (!sessions.some((session) => session.id === id)) {
+    throw new Error('Impossibile eliminare la conversazione: la chat selezionata non esiste più.');
+  }
+  if (!sessions.some((session) => session.id === activeId)) {
+    throw new Error('Impossibile eliminare la conversazione: la chat attiva non è valida.');
   }
   const remaining = sessions.filter((session) => session.id !== id);
   const safeSessions = remaining.length ? remaining : [createChatSession()];
