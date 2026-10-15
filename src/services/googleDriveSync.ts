@@ -32,7 +32,19 @@ async function request(url: string, token: string, method = 'GET', data?: string
     }
     return response.data;
   }
-  const response = await fetch(url, { method, headers, body: data });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  let response: Response;
+  try {
+    response = await fetch(url, { method, headers, body: data, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('La richiesta a Google Drive è scaduta dopo 30 secondi. Controlla la connessione e riprova.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) throw new Error(`Google Drive ha risposto con HTTP ${response.status}.`);
   if (response.status === 204) return null;
   const responseType = response.headers.get('content-type') || '';
