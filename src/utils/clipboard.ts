@@ -8,20 +8,24 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
     console.warn("Clipboard API non disponibile, uso il fallback...", err);
   }
 
+  let textArea: HTMLTextAreaElement | null = null;
   try {
-    const textArea = document.createElement("textarea");
+    textArea = document.createElement("textarea");
     textArea.value = text;
+    textArea.setAttribute("readonly", "");
+    textArea.setAttribute("aria-hidden", "true");
     textArea.style.position = "fixed";
     textArea.style.opacity = "0";
+    textArea.style.pointerEvents = "none";
+    textArea.style.left = "-9999px";
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
-    
-    const successful = document.execCommand('copy');
-    document.body.removeChild(textArea);
-    return successful;
+    return document.execCommand("copy");
   } catch (err) {
     console.error("Fallito anche il fallback della copia:", err);
     return false;
+  } finally {
+    textArea?.remove();
   }
 };
