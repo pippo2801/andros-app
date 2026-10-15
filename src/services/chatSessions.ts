@@ -67,7 +67,7 @@ const WELCOME_MESSAGE: ChatMessageData = {
 };
 
 function isMessage(value: unknown): value is ChatMessageData {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const item = value as Record<string, unknown>;
   return (item.role === 'user' || item.role === 'assistant') && typeof item.content === 'string';
 }
