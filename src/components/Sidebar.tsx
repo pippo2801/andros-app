@@ -28,8 +28,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   if (!isOpen) return null;
-  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
-  const matchesQuery = (session: ChatSession) => !normalizedQuery || session.title.toLocaleLowerCase().includes(normalizedQuery);
+  const normalizeSearch = (value: string) => value.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const normalizedQuery = normalizeSearch(searchQuery.trim());
+  const matchesQuery = (session: ChatSession) => !normalizedQuery || normalizeSearch(session.title).includes(normalizedQuery);
   const pinned = sessions.filter((session) => session.pinned && matchesQuery(session));
   const recent = sessions.filter((session) => !session.pinned && matchesQuery(session));
   const beginRename = (session: ChatSession) => {
