@@ -27,10 +27,14 @@ export function loadDeletedChatSessions(): DeletedChatSession[] {
 }
 
 export function saveDeletedChatSessions(items: DeletedChatSession[]): void {
+  if (!Array.isArray(items) || !items.every((item) =>
+    Boolean(item && typeof item.id === 'string' && item.id.trim() &&
+      typeof item.deletedAt === 'number' && Number.isFinite(item.deletedAt)))) {
+    throw new Error('Il registro delle chat eliminate contiene dati non validi. I dati esistenti non sono stati modificati.');
+  }
+
   const latest = new Map<string, DeletedChatSession>();
   for (const item of items) {
-    if (!item || typeof item.id !== 'string' || !item.id.trim() ||
-        typeof item.deletedAt !== 'number' || !Number.isFinite(item.deletedAt)) continue;
     const previous = latest.get(item.id);
     if (!previous || item.deletedAt > previous.deletedAt) latest.set(item.id, item);
   }
