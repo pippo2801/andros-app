@@ -200,11 +200,13 @@ export function parseArchiveFile(name: string, content: string): ArchivedConvers
   }
   const lower = name.toLowerCase();
   if (lower.endsWith('.json')) {
+    let parsed: unknown;
     try {
-      return parseGenericJson(JSON.parse(content), 'JSON importato');
+      parsed = JSON.parse(content);
     } catch {
       throw new Error('Il file JSON non è valido o non può essere letto.');
     }
+    return parseGenericJson(parsed, 'JSON importato');
   }
   if (lower.endsWith('.csv')) return parseCsv(content, name);
   if (lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.html') || lower.endsWith('.htm')) {
