@@ -41,6 +41,10 @@ export function getOllamaConfig(): OllamaConfig {
 }
 
 export function saveOllamaConfig(config: OllamaConfig): OllamaConfig {
+  if (!config || typeof config !== 'object' ||
+      typeof config.endpoint !== 'string' || typeof config.model !== 'string') {
+    throw new Error('La configurazione Ollama deve contenere un indirizzo e un nome modello testuali.');
+  }
   const normalized = {
     endpoint: config.endpoint.trim().replace(/\/+$/, ''),
     model: config.model.trim(),
