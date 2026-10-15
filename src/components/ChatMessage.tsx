@@ -11,10 +11,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    const success = await copyToClipboard(content);
-    if (success) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    try {
+      const success = await copyToClipboard(content);
+      if (success) {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (error) {
+      console.warn('Impossibile copiare il messaggio negli appunti:', error);
     }
   };
 
@@ -28,7 +32,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
         <div className="whitespace-pre-wrap text-sm leading-relaxed">{content}</div>
         
         <button
-          onClick={handleCopy}
+          type="button"
+          aria-label={copied ? 'Testo copiato' : 'Copia testo'}
+          onClick={() => { void handleCopy(); }}
           className="absolute top-2 right-2 p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
           title="Copia testo"
         >
