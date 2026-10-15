@@ -74,6 +74,9 @@ function parseChatGptConversation(item: Record<string, unknown>, index: number):
 
 function parseGenericJson(value: unknown, sourceName: string): ArchivedConversation[] {
   const root = Array.isArray(value) ? value : value && typeof value === 'object' ? [value] : [];
+  if (root.length > MAX_CONVERSATIONS) {
+    throw new Error(`Il file contiene più di ${MAX_CONVERSATIONS} conversazioni. Dividi l'esportazione e riprova.`);
+  }
   const output: ArchivedConversation[] = [];
   root.forEach((raw, index) => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
@@ -84,6 +87,9 @@ function parseGenericJson(value: unknown, sourceName: string): ArchivedConversat
       return;
     }
     const entries = Array.isArray(item.messages) ? item.messages : Array.isArray(item.turns) ? item.turns : [];
+    if (entries.length > MAX_MESSAGES_PER_CONVERSATION) {
+      throw new Error(`Una conversazione supera il limite di ${MAX_MESSAGES_PER_CONVERSATION} messaggi.`);
+    }
     const messages: ArchivedMessage[] = [];
     for (const rawMessage of entries) {
       if (!rawMessage || typeof rawMessage !== 'object' || Array.isArray(rawMessage)) continue;
@@ -132,6 +138,9 @@ function parseCsvRows(text: string): string[][] {
 
 function parseCsv(text: string, name: string): ArchivedConversation[] {
   const rows = parseCsvRows(text);
+  if (rows.length > MAX_CONVERSATIONS + 1) {
+    throw new Error(`Il CSV supera il limite di ${MAX_CONVERSATIONS} righe di conversazione. Dividi il file e riprova.`);
+  }
   if (rows.length < 2) return parsePlainText(text, name);
   const headers = rows[0].map((value) => value.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
   const findColumn = (patterns: RegExp[]) => headers.findIndex((header) => patterns.some((pattern) => pattern.test(header)));
@@ -231,7 +240,11 @@ export async function parseArchiveUpload(file: File): Promise<ArchivedConversati
   for (const [path, bytes] of chatJson) {
     try {
       conversations.push(...parseArchiveFile(path.split('/').pop() || path, strFromU8(bytes)));
-    } catch {
+      if (conversations.length > MAX_CONVERSATIONS) {
+        throw new Error(`Lo ZIP supera il limite di ${MAX_CONVERSATIONS} conversazioni. Dividi l'archivio e riprova.`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('supera il limite')) throw error;
       // Continue reading other recognized files in the same archive.
     }
   }
