@@ -272,7 +272,7 @@ export function saveArchivedConversations(conversations: ArchivedConversation[])
       Array.isArray(item.messages) && item.messages.every((message) =>
         Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
           (message.role === 'user' || message.role === 'assistant') &&
-          typeof message.content === 'string')))) {
+          typeof message.content === 'string'))))) {
     throw new Error('L’archivio contiene conversazioni non valide. I dati salvati non sono stati modificati.');
   }
   const bounded = conversations.slice(-MAX_CONVERSATIONS);
