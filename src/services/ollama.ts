@@ -38,8 +38,16 @@ export function saveOllamaConfig(config: OllamaConfig): OllamaConfig {
     endpoint: config.endpoint.trim().replace(/\/+$/, ''),
     model: config.model.trim(),
   };
-  if (!/^https?:\/\//i.test(normalized.endpoint)) {
-    throw new Error('L’indirizzo deve iniziare con http:// oppure https://.');
+  let parsedEndpoint: URL;
+  try {
+    parsedEndpoint = new URL(normalized.endpoint);
+  } catch {
+    throw new Error('Inserisci un indirizzo Ollama valido, ad esempio http://127.0.0.1:11434.');
+  }
+  if ((parsedEndpoint.protocol !== 'http:' && parsedEndpoint.protocol !== 'https:') ||
+      !parsedEndpoint.hostname || parsedEndpoint.username || parsedEndpoint.password ||
+      parsedEndpoint.search || parsedEndpoint.hash) {
+    throw new Error('L’indirizzo Ollama deve usare HTTP o HTTPS, avere un host valido e non contenere credenziali, query o frammenti.');
   }
   if (!normalized.model) throw new Error('Inserisci il nome del modello Ollama.');
   localStorage.setItem(CONFIG_KEY, JSON.stringify(normalized));
