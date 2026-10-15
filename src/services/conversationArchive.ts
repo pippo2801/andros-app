@@ -118,6 +118,7 @@ function parseCsvRows(text: string): string[][] {
       row = [];
     } else cell += char;
   }
+  if (quoted) throw new Error('Il CSV contiene un campo tra virgolette non chiuso.');
   row.push(cell);
   if (row.some((value) => value.trim())) rows.push(row);
   return rows;
