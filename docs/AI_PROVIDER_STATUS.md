@@ -6,7 +6,7 @@ Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codi
 
 - [x] **Ollama**: il client Android/Web chiama l'endpoint Ollama configurato e usa il modello locale scelto. Modello predefinito nel codice: `qwen2.5-coder:7b`.
 - [x] **Google Gemini**: chiamata diretta a Gemini API con chiave fornita dall'utente; la chiave è conservata nella sessione, non come segreto incorporato nell'app.
-- [x] **Router locale deterministico**: seleziona un modello Ollama installato in base alla categoria stimata della richiesta.
+- [x] **Router locale deterministico**: seleziona un modello Ollama installato in base alla categoria stimata della richiesta. Il matching è a parole chiave normalizzate, non una comprensione semantica completa.
 - [x] **Fallback in modalità automatica**: il codice prova l'altro provider configurato quando il primo fallisce e le condizioni lo consentono.
 - [ ] **Verifica end-to-end sul telefono**: non considerare i controlli di compilazione equivalenti a una prova reale di chat, rete, persistenza e gestione degli errori.
 - [ ] **Immagini in ingresso**: implementazione presente nella PR #27 (`feat/image-attachments`), ma la PR è ancora aperta e in bozza; non va considerata integrata in `main` finché non viene verificata e unita.
@@ -15,8 +15,9 @@ Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codi
 ## CI e creazione APK
 
 - [x] Il workflow `.github/workflows/build-apk.yml` è manuale (`workflow_dispatch`): i normali commit non devono creare APK.
-- [x] Il workflow `.github/workflows/verify.yml` esegue `npm ci` e `npm run build` senza compilare APK, per controllare le modifiche web.
-- [ ] La verifica CI del workflow separato deve concludersi con successo dopo il commit che lo introduce.
+- [x] Il workflow `.github/workflows/verify.yml` esegue `npm install` e `npm run build` senza compilare APK, per controllare le modifiche web.
+- [x] La verifica web CI è riuscita sul commit `d14f50553580e9da904de90d3e344c11ec149554`: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38734028580).
+- [ ] **Debito tecnico**: `package.json` e `package-lock.json` non sono sincronizzati. Per questo il workflow usa temporaneamente `npm install` invece di `npm ci`; la correzione definitiva del lockfile resta da fare.
 - [ ] La compilazione Android e il test sul POCO restano verifiche distinte, da eseguire quando richiesto.
 
 ## Valutazione di FreeLLMAPI
