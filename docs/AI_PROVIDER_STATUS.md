@@ -15,16 +15,17 @@ Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codi
 ## Sincronizzazione Google Drive
 
 - [x] Il codice della sincronizzazione ora include chat attive, archivio conversazioni e regole permanenti nel file Andros su Drive.
-- [x] Il merge usa gli ID e i timestamp disponibili; in caso di parità o timestamp assente privilegia la copia locale. I backup precedenti di schema 1 vengono letti e migrati al formato schema 2 al successivo salvataggio.
+- [x] Il merge usa gli ID e i timestamp disponibili; in caso di parità o timestamp assente privilegia la copia locale. I backup degli schemi 1 e 2 vengono letti e migrati allo schema 3 al successivo salvataggio.
+- [x] Le chat eliminate generano tombstone locali persistenti e il registro viene incluso nel backup Drive; la sincronizzazione filtra le chat eliminate in base al timestamp. È una protezione implementata nel codice, non ancora validata con due dispositivi reali.
 - [ ] **Test reale OAuth/Drive**: non ancora verificato con un Client ID OAuth Android valido e un account Google.
-- [ ] **Conflitti e cancellazioni tra dispositivi**: la fusione evita duplicati, ma non implementa tombstone per propagare le cancellazioni; una voce rimossa da un dispositivo può ricomparire dal backup remoto.
+- [ ] **Test delle cancellazioni tra dispositivi**: provare su due dispositivi login, sincronizzazione, eliminazione offline e sincronizzazione successiva; verificare anche conflitti e recupero da interruzioni.
 - [ ] **Limiti di spazio e grandi archivi**: testare dimensioni, errori di quota e recupero dopo interruzioni prima di affidarsi alla sincronizzazione come unico backup.
 
 ## CI e creazione APK
 
 - [x] Il workflow `.github/workflows/build-apk.yml` è manuale (`workflow_dispatch`): i normali commit non devono creare APK.
 - [x] Il workflow `.github/workflows/verify.yml` esegue `npm install` e `npm run build` senza compilare APK.
-- [x] La build web è riuscita sul commit più recente `49252c38de8a8e6275a8ca506c242331afd6fa87`: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38734420175).
+- [x] La build web è riuscita sul commit `b37d513e40b7c054b01f7a5b2358031a75eea6f6`, che include la sincronizzazione dei tombstone: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38734892946).
 - [ ] **Debito tecnico**: `package.json` e `package-lock.json` non sono sincronizzati. Per questo il workflow usa temporaneamente `npm install` invece di `npm ci`; la correzione definitiva del lockfile resta da fare.
 - [ ] La compilazione Android e il test sul POCO restano verifiche distinte, da eseguire quando richiesto.
 
