@@ -378,7 +378,7 @@ export function exportArchivedConversations(conversations: ArchivedConversation[
             Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
               (message.role === 'user' || message.role === 'assistant') &&
               typeof message.content === 'string' && message.content.length <= MAX_MESSAGE_LENGTH &&
-              (message.timestamp === undefined || (typeof message.timestamp === 'number' && Number.isFinite(message.timestamp))))))) {
+              (message.timestamp === undefined || (typeof message.timestamp === 'number' && Number.isFinite(message.timestamp)))))) {
     throw new Error('Impossibile esportare l’archivio: una o più conversazioni superano i limiti o non sono valide.');
   }
   if (new Set(conversations.map((conversation) => conversation.id)).size !== conversations.length) {
