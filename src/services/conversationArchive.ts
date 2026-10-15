@@ -127,8 +127,8 @@ function parseGenericJson(value: unknown, sourceName: string): ArchivedConversat
     if (messages.length) {
       output.push({
         id: `import-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
-        title: typeof item.title === 'string' ? item.title : typeof item.name === 'string' ? item.name : `Conversazione importata ${index + 1}`,
-        source: sourceName,
+        title: (typeof item.title === 'string' && item.title.trim() ? item.title.trim() : typeof item.name === 'string' && item.name.trim() ? item.name.trim() : `Conversazione importata ${index + 1}`).slice(0, MAX_TITLE_LENGTH),
+        source: sourceName.slice(0, MAX_SOURCE_LENGTH),
         importedAt: Date.now(),
         messages,
       });
@@ -186,8 +186,8 @@ function parseCsv(text: string, name: string): ArchivedConversation[] {
     if (!messages.length) return;
     output.push({
       id: `csv-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
-      title: (titleIndex >= 0 ? values[titleIndex] : '')?.trim() || `Attività importata ${index + 1}`,
-      source: /copilot|microsoft/i.test(name) ? 'Microsoft Copilot CSV' : 'CSV importato',
+      title: ((titleIndex >= 0 ? values[titleIndex] : '')?.trim() || `Attività importata ${index + 1}`).slice(0, MAX_TITLE_LENGTH),
+      source: (/copilot|microsoft/i.test(name) ? 'Microsoft Copilot CSV' : 'CSV importato').slice(0, MAX_SOURCE_LENGTH),
       importedAt: dateIndex >= 0 && values[dateIndex] ? (Date.parse(values[dateIndex]) || Date.now()) : Date.now(),
       messages,
     });
@@ -210,7 +210,7 @@ function parsePlainText(text: string, name: string): ArchivedConversation[] {
   if (!messages.length) messages.push({ role: 'user', content: requireMessageLength(cleaned) });
   return [{
     id: `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    title: name.replace(/\.[^.]+$/, '') || 'Testo importato',
+    title: (name.replace(/\.[^.]+$/, '') || 'Testo importato').slice(0, MAX_TITLE_LENGTH),
     source: 'Testo importato',
     importedAt: Date.now(),
     messages,
