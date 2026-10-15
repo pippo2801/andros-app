@@ -41,9 +41,9 @@ function parseChatGptConversation(item: Record<string, unknown>, index: number):
   const mapping = item.mapping;
   if (!mapping || typeof mapping !== 'object') return null;
   const nodes = Object.values(mapping as Record<string, unknown>)
-    .filter((node): node is Record<string, unknown> => Boolean(node && typeof node === 'object'))
+    .filter((node): node is Record<string, unknown> => Boolean(node && typeof node === 'object' && !Array.isArray(node)))
     .map((node) => node.message)
-    .filter((message): message is Record<string, unknown> => Boolean(message && typeof message === 'object'))
+    .filter((message): message is Record<string, unknown> => Boolean(message && typeof message === 'object' && !Array.isArray(message)))
     .sort((a, b) => Number(a.create_time || 0) - Number(b.create_time || 0));
   const messages: ArchivedMessage[] = [];
   for (const message of nodes) {
@@ -54,7 +54,9 @@ function parseChatGptConversation(item: Record<string, unknown>, index: number):
     const content = textFromContent(message.content && typeof message.content === 'object'
       ? (message.content as Record<string, unknown>).parts ?? message.content
       : message.content).trim();
-    if (role && content) messages.push({ role, content: content.slice(0, MAX_MESSAGE_LENGTH), timestamp: Number(message.create_time || 0) * 1000 || undefined });
+    const rawTime = Number(message.create_time);
+    const timestamp = Number.isFinite(rawTime) && rawTime > 0 && rawTime <= 8.64e12 ? rawTime * 1000 : undefined;
+    if (role && content) messages.push({ role, content: content.slice(0, MAX_MESSAGE_LENGTH), timestamp });
   }
   if (!messages.length) return null;
   return {
@@ -70,7 +72,7 @@ function parseGenericJson(value: unknown, sourceName: string): ArchivedConversat
   const root = Array.isArray(value) ? value : value && typeof value === 'object' ? [value] : [];
   const output: ArchivedConversation[] = [];
   root.forEach((raw, index) => {
-    if (!raw || typeof raw !== 'object') return;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
     const item = raw as Record<string, unknown>;
     const chatGpt = parseChatGptConversation(item, index);
     if (chatGpt) {
@@ -80,7 +82,7 @@ function parseGenericJson(value: unknown, sourceName: string): ArchivedConversat
     const entries = Array.isArray(item.messages) ? item.messages : Array.isArray(item.turns) ? item.turns : [];
     const messages: ArchivedMessage[] = [];
     for (const rawMessage of entries) {
-      if (!rawMessage || typeof rawMessage !== 'object') continue;
+      if (!rawMessage || typeof rawMessage !== 'object' || Array.isArray(rawMessage)) continue;
       const msg = rawMessage as Record<string, unknown>;
       const role = normalizeRole(msg.role ?? msg.author ?? msg.sender);
       const content = textFromContent(msg.content ?? msg.text ?? msg.parts).trim();
