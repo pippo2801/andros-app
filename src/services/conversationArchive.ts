@@ -177,6 +177,12 @@ function parsePlainText(text: string, name: string): ArchivedConversation[] {
 }
 
 export function parseArchiveFile(name: string, content: string): ArchivedConversation[] {
+  if (typeof name !== 'string' || !name.trim() || typeof content !== 'string') {
+    throw new Error('Nome o contenuto del file non valido.');
+  }
+  if (content.length > 100 * 1024 * 1024) {
+    throw new Error('Il file supera il limite di 100 MB. Dividi il file e riprova.');
+  }
   const lower = name.toLowerCase();
   if (lower.endsWith('.json')) {
     try {
@@ -196,9 +202,13 @@ export function parseArchiveFile(name: string, content: string): ArchivedConvers
 }
 
 export async function parseArchiveUpload(file: File): Promise<ArchivedConversation[]> {
+  if (!file || typeof file.name !== 'string' || typeof file.size !== 'number' ||
+      !Number.isFinite(file.size) || file.size < 0 || typeof file.text !== 'function') {
+    throw new Error('Il file selezionato non è valido o non può essere letto.');
+  }
+  if (file.size > 100 * 1024 * 1024) throw new Error('Il file supera il limite di 100 MB.');
   const name = file.name.toLowerCase();
   if (!name.endsWith('.zip')) return parseArchiveFile(file.name, await file.text());
-  if (file.size > 100 * 1024 * 1024) throw new Error('L’archivio ZIP supera il limite di 100 MB.');
   let files: Record<string, Uint8Array>;
   try {
     files = unzipSync(new Uint8Array(await file.arrayBuffer()));
@@ -302,6 +312,7 @@ export function searchArchivedConversations(conversations: ArchivedConversation[
   conversation: ArchivedConversation;
   message: ArchivedMessage;
 }> {
+  if (!Array.isArray(conversations) || typeof query !== 'string') return [];
   const terms = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
   if (!terms.length) return [];
   const matches: Array<{ conversation: ArchivedConversation; message: ArchivedMessage }> = [];
@@ -315,5 +326,8 @@ export function searchArchivedConversations(conversations: ArchivedConversation[
 }
 
 export function exportArchivedConversations(conversations: ArchivedConversation[]): string {
+  if (!Array.isArray(conversations)) {
+    throw new Error('Impossibile esportare l’archivio: l’elenco delle conversazioni non è valido.');
+  }
   return JSON.stringify({ app: 'ANDROS OS', version: 1, exportedAt: new Date().toISOString(), conversations }, null, 2);
 }
