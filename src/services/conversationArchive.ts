@@ -365,20 +365,32 @@ export function searchArchivedConversations(conversations: ArchivedConversation[
   return matches.slice(0, 100);
 }
 
+function isValidArchivedConversation(value: unknown): value is ArchivedConversation {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const item = value as Record<string, unknown>;
+  if (typeof item.id !== 'string' || !item.id.trim() || item.id.length > MAX_ID_LENGTH ||
+      typeof item.title !== 'string' || item.title.length > MAX_TITLE_LENGTH ||
+      typeof item.source !== 'string' || item.source.length > MAX_SOURCE_LENGTH ||
+      typeof item.importedAt !== 'number' || !Number.isFinite(item.importedAt) ||
+      !Array.isArray(item.messages) || item.messages.length > MAX_MESSAGES_PER_CONVERSATION) {
+    return false;
+  }
+
+  return item.messages.every((value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const message = value as Record<string, unknown>;
+    if ((message.role !== 'user' && message.role !== 'assistant') ||
+        typeof message.content !== 'string' || message.content.length > MAX_MESSAGE_LENGTH) {
+      return false;
+    }
+    return message.timestamp === undefined ||
+      (typeof message.timestamp === 'number' && Number.isFinite(message.timestamp));
+  });
+}
+
 export function exportArchivedConversations(conversations: ArchivedConversation[]): string {
   if (!Array.isArray(conversations) || conversations.length > MAX_CONVERSATIONS ||
-      !conversations.every((item) =>
-        Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
-          typeof item.id === 'string' && item.id.trim() && item.id.length <= MAX_ID_LENGTH &&
-          typeof item.title === 'string' && item.title.length <= MAX_TITLE_LENGTH &&
-          typeof item.source === 'string' && item.source.length <= MAX_SOURCE_LENGTH &&
-          typeof item.importedAt === 'number' && Number.isFinite(item.importedAt) &&
-          Array.isArray(item.messages) && item.messages.length <= MAX_MESSAGES_PER_CONVERSATION &&
-          item.messages.every((message) =>
-            Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
-              (message.role === 'user' || message.role === 'assistant') &&
-              typeof message.content === 'string' && message.content.length <= MAX_MESSAGE_LENGTH &&
-              (message.timestamp === undefined || (typeof message.timestamp === 'number' && Number.isFinite(message.timestamp)))))) {
+      !conversations.every(isValidArchivedConversation)) {
     throw new Error('Impossibile esportare l’archivio: una o più conversazioni superano i limiti o non sono valide.');
   }
   if (new Set(conversations.map((conversation) => conversation.id)).size !== conversations.length) {
