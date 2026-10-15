@@ -128,8 +128,18 @@ export async function sendToOllama(
   modelOverride?: string,
   approvedRules: string[] = [],
 ): Promise<string> {
+  if (!Array.isArray(messages) || !messages.every((message) =>
+    message && typeof message === 'object' && !Array.isArray(message) &&
+    (message.role === 'user' || message.role === 'assistant') &&
+    typeof message.content === 'string')) {
+    throw new Error('La cronologia contiene messaggi non validi. Controlla la conversazione e riprova.');
+  }
+  if (!Array.isArray(approvedRules) || !approvedRules.every((rule) => typeof rule === 'string')) {
+    throw new Error('Le regole permanenti non hanno un formato valido. Controllale nelle impostazioni.');
+  }
   const config = getOllamaConfig();
   const model = modelOverride?.trim() || config.model;
+  if (!model) throw new Error('Seleziona un modello Ollama nelle impostazioni.');
 
   try {
     const systemMessage = approvedRules.length
