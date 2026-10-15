@@ -74,6 +74,11 @@ function validatePackage(value: unknown): asserts value is SyncPackage {
     if (ruleIds.has(rule.id)) throw new Error('Il pacchetto contiene regole con ID duplicati. L’importazione è stata interrotta.');
     ruleIds.add(rule.id);
   }
+  const conversationIds = new Set<string>();
+  for (const conversation of value.conversations as ArchivedConversation[]) {
+    if (conversationIds.has(conversation.id)) throw new Error('Il pacchetto contiene conversazioni con ID duplicati. L’importazione è stata interrotta.');
+    conversationIds.add(conversation.id);
+  }
 }
 
 export function createSyncPackage(currentMessages: ChatMessageData[], rules: SyncRule[]): SyncPackage {
