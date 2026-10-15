@@ -15,8 +15,8 @@ const TASK_TERMS: Record<RouteDecision['category'], string[]> = {
     'typescript', 'react', 'bug', 'errore', 'debug', 'apk', 'android',
     'gradle', 'git', 'script', 'funzione', 'classe', 'compila',
     'code', 'coding', 'programming', 'debugging', 'compile', 'compiler',
-    'repository', 'pull request', 'unit test', 'function', 'typescript',
-    'javascript', 'build an app', 'write a script', 'stack trace',
+    'repository', 'pull request', 'unit test', 'function', 'build an app',
+    'write a script', 'stack trace',
   ],
   reasoning: [
     'dimostra', 'confronta', 'analizza', 'ragiona', 'pro e contro',
@@ -29,27 +29,40 @@ const TASK_TERMS: Record<RouteDecision['category'], string[]> = {
     'scrivi', 'riscrivi', 'email', 'messaggio', 'articolo', 'riassumi',
     'traduci', 'correggi il testo', 'descrizione', 'write', 'rewrite',
     'draft', 'summarize', 'summary', 'translate', 'proofread', 'essay',
-    'email', 'message', 'article', 'description', 'make this clearer',
+    'message', 'article', 'description', 'make this clearer',
   ],
   general: [],
 };
+
+function normalizeForMatching(value: string): string {
+  return value
+    .toLocaleLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}_]+/gu, ' ')
+    .trim();
+}
 
 /**
  * Deterministic, free-first routing for models already installed in Ollama.
  * It does not contact a cloud provider or transmit prompts.
  *
- * This is keyword-based routing, not semantic intent detection. When a task
- * could fit multiple categories, the priority is vision, coding, reasoning,
- * then writing; otherwise the preferred/first installed model is used.
+ * Matching uses normalized whole words/phrases to avoid accidental hits such
+ * as "git" inside "digital" or "vision" inside "television". This remains
+ * keyword-based routing, not semantic intent detection. Priority is vision,
+ * coding, reasoning, then writing; otherwise use the preferred/first model.
  */
 export function chooseModelForTask(
   prompt: string,
   installedModels: string[],
   preferredModel: string,
 ): RouteDecision {
-  const text = prompt.toLocaleLowerCase();
+  const text = normalizeForMatching(prompt);
   const has = (category: Exclude<RouteDecision['category'], 'general'>) =>
-    TASK_TERMS[category].some((term) => text.includes(term));
+    TASK_TERMS[category].some((term) => {
+      const normalizedTerm = normalizeForMatching(term);
+      return normalizedTerm.length > 0 && (` ${text} `).includes(` ${normalizedTerm} `);
+    });
 
   let category: RouteDecision['category'] = 'general';
   if (has('vision')) category = 'vision';
