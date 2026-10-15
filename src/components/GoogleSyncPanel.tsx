@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Cloud, CloudDownload, CloudUpload, LogIn, LogOut, ShieldCheck, X, AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react';
 import { signInWithGoogle, syncAndrosSnapshot, type AndrosSyncSnapshot, type GoogleSession } from '../services/googleDriveSync';
 import { loadArchivedConversationsForSync, loadArchivedConversations, saveArchivedConversations } from '../services/conversationArchive';
-import { loadChatSessionState, loadDeletedChatSessions, saveChatSessionState, saveDeletedChatSessions, type ChatSession } from '../services/chatSessions';
+import { loadChatSessionStateForSync, loadDeletedChatSessions, saveChatSessionState, saveDeletedChatSessions, type ChatSession } from '../services/chatSessions';
 
 const CLIENT_KEY = 'andros.google.oauth-client-id.v1';
 const RULES_KEY = 'andros.memory.rules.v1';
@@ -63,7 +63,7 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
         }
         rules = parsed;
       }
-      const chatState = loadChatSessionState();
+      const chatState = loadChatSessionStateForSync();
       const local: AndrosSyncSnapshot = {
         schema: 3,
         updatedAt: Date.now(),
