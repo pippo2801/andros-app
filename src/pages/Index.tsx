@@ -10,6 +10,7 @@ import { ArchivePanel } from '../components/ArchivePanel';
 import { chooseModelForTask } from '../services/aiRouter';
 import { getGeminiApiKey, sendToGemini, setGeminiApiKey } from '../services/gemini';
 import { GoogleSyncPanel } from '../components/GoogleSyncPanel';
+import { SyncPanel } from '../components/SyncPanel';
 import {
   checkOllamaConnection,
   getOllamaConfig,
@@ -69,6 +70,7 @@ export default function Index() {
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [googleOpen, setGoogleOpen] = useState(false);
+  const [manualSyncOpen, setManualSyncOpen] = useState(false);
   const [geminiKeyDraft, setGeminiKeyDraft] = useState(getGeminiApiKey);
   const [aiMode, setAiMode] = useState<'auto' | 'ollama' | 'gemini'>(() => {
     try {
@@ -488,6 +490,16 @@ export default function Index() {
         </div>
       </section>
 
+      {manualSyncOpen && (
+        <SyncPanel
+          onClose={() => setManualSyncOpen(false)}
+          onNotice={setNotice}
+          currentMessages={messages}
+          rules={memoryRules}
+          onRulesUpdated={setMemoryRules}
+        />
+      )}
+
       {googleOpen && (
         <GoogleSyncPanel
           onClose={() => setGoogleOpen(false)}
@@ -605,6 +617,9 @@ export default function Index() {
               </div>
               <button type="button" onClick={openGoogleSync} className="flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-3 text-sm font-medium text-cyan-100 hover:bg-cyan-400/[0.12]">
                 <Cloud size={16} /> Account Google e sincronizzazione
+              </button>
+              <button type="button" onClick={() => { setManualSyncOpen(true); setSettingsOpen(false); }} className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-medium text-slate-200 hover:bg-white/[0.08]">
+                <ArrowLeftRight size={16} /> Trasferimento manuale tramite file
               </button>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-300">Indirizzo Ollama</span>
