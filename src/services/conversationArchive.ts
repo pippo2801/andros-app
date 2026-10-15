@@ -43,8 +43,12 @@ function normalizeRole(value: unknown): 'user' | 'assistant' | null {
 
 function parseChatGptConversation(item: Record<string, unknown>, index: number): ArchivedConversation | null {
   const mapping = item.mapping;
-  if (!mapping || typeof mapping !== 'object') return null;
-  const nodes = Object.values(mapping as Record<string, unknown>)
+  if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) return null;
+  const mappingEntries = Object.values(mapping as Record<string, unknown>);
+  if (mappingEntries.length > MAX_MESSAGES_PER_CONVERSATION) {
+    throw new Error(`Una conversazione ChatGPT supera il limite di sicurezza di ${MAX_MESSAGES_PER_CONVERSATION} messaggi/nodi. Dividi l'esportazione e riprova.`);
+  }
+  const nodes = mappingEntries
     .filter((node): node is Record<string, unknown> => Boolean(node && typeof node === 'object' && !Array.isArray(node)))
     .map((node) => node.message)
     .filter((message): message is Record<string, unknown> => Boolean(message && typeof message === 'object' && !Array.isArray(message)))
@@ -60,12 +64,22 @@ function parseChatGptConversation(item: Record<string, unknown>, index: number):
       : message.content).trim();
     const rawTime = Number(message.create_time);
     const timestamp = Number.isFinite(rawTime) && rawTime > 0 && rawTime <= 8.64e12 ? rawTime * 1000 : undefined;
-    if (role && content) messages.push({ role, content: content.slice(0, MAX_MESSAGE_LENGTH), timestamp });
+    if (role && content) {
+      if (content.length > MAX_MESSAGE_LENGTH) {
+        throw new Error(`Un messaggio della conversazione ChatGPT supera il limite di ${MAX_MESSAGE_LENGTH} caratteri. Il contenuto non è stato troncato: l'importazione è stata interrotta per evitare perdita di dati.`);
+      }
+      messages.push({ role, content, timestamp });
+      if (messages.length > MAX_MESSAGES_PER_CONVERSATION) {
+        throw new Error(`Una conversazione ChatGPT supera il limite di ${MAX_MESSAGES_PER_CONVERSATION} messaggi. Dividi l'esportazione e riprova.`);
+      }
+    }
   }
   if (!messages.length) return null;
   return {
     id: `import-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
-    title: typeof item.title === 'string' && item.title.trim() ? item.title.trim() : `Conversazione importata ${index + 1}`,
+    title: typeof item.title === 'string' && item.title.trim()
+      ? item.title.trim().slice(0, MAX_TITLE_LENGTH)
+      : `Conversazione importata ${index + 1}`,
     source: 'ChatGPT / JSON',
     importedAt: Date.now(),
     messages,
@@ -96,7 +110,12 @@ function parseGenericJson(value: unknown, sourceName: string): ArchivedConversat
       const msg = rawMessage as Record<string, unknown>;
       const role = normalizeRole(msg.role ?? msg.author ?? msg.sender);
       const content = textFromContent(msg.content ?? msg.text ?? msg.parts).trim();
-      if (role && content) messages.push({ role, content: content.slice(0, MAX_MESSAGE_LENGTH) });
+      if (role && content) {
+        if (content.length > MAX_MESSAGE_LENGTH) {
+          throw new Error(`Un messaggio del file supera il limite di ${MAX_MESSAGE_LENGTH} caratteri. Il contenuto non è stato troncato: l'importazione è stata interrotta per evitare perdita di dati.`);
+        }
+        messages.push({ role, content });
+      }
     }
     if (messages.length) {
       output.push({
