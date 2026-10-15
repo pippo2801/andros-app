@@ -123,6 +123,10 @@ export function loadChatSessionStateForSync(): ChatSessionState {
       !state.sessions.some((session) => session.id === state.activeId)) {
     throw new Error('Le chat locali sono incomplete o non valide. La sincronizzazione è stata interrotta per proteggere il backup.');
   }
+  const sessionIds = new Set(state.sessions.map((session) => session.id));
+  if (sessionIds.size !== state.sessions.length) {
+    throw new Error('Le chat locali contengono identificativi duplicati. La sincronizzazione è stata interrotta per evitare di unire conversazioni diverse.');
+  }
   return {
     activeId: state.activeId,
     sessions: state.sessions
