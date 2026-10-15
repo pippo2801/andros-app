@@ -41,6 +41,7 @@ export async function sendToGemini(
   apiKey: string,
   approvedRules: string[] = [],
 ): Promise<string> {
+  if (typeof apiKey !== 'string') throw new Error('La chiave Gemini deve essere una stringa.');
   const key = apiKey.trim();
   if (!key) throw new Error('Configura una chiave Gemini API gratuita in Google AI Studio oppure usa Ollama.');
   if (!Array.isArray(messages) || !messages.every((message) =>
@@ -58,6 +59,7 @@ export async function sendToGemini(
   }
   const contents = messages
     .slice(firstUserMessage)
+    .filter((message) => message.content.trim().length > 0)
     .reduce<Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>>((items, message) => {
       const role = message.role === 'assistant' ? 'model' as const : 'user' as const;
       const previous = items[items.length - 1];
@@ -65,6 +67,9 @@ export async function sendToGemini(
       else items.push({ role, parts: [{ text: message.content }] });
       return items;
     }, []);
+  if (!contents.length || contents[0].role !== 'user') {
+    throw new Error('Aggiungi un messaggio testuale prima di inviare la richiesta a Gemini.');
+  }
   const body: Record<string, unknown> = { contents, generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } };
   if (approvedRules.length) {
     body.systemInstruction = {
