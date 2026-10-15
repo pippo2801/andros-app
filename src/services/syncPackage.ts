@@ -69,6 +69,11 @@ function validatePackage(value: unknown): asserts value is SyncPackage {
       !value.conversations.every(isConversation)) {
     throw new Error('Il pacchetto Andros non è valido o usa un formato non supportato. I dati locali non sono stati modificati.');
   }
+  const ruleIds = new Set<string>();
+  for (const rule of value.rules as SyncRule[]) {
+    if (ruleIds.has(rule.id)) throw new Error('Il pacchetto contiene regole con ID duplicati. L’importazione è stata interrotta.');
+    ruleIds.add(rule.id);
+  }
 }
 
 export function createSyncPackage(currentMessages: ChatMessageData[], rules: SyncRule[]): SyncPackage {
@@ -127,6 +132,9 @@ export function importAndMergeSyncPackage(pack: SyncPackage): { rulesAdded: numb
     existingRules = parsedRules;
     if (existingRules.length > MAX_RULES) {
       throw new Error('Le regole locali superano il limite supportato di 500. Esporta una copia e riduci l’elenco prima di importare.');
+    }
+    if (new Set(existingRules.map((rule) => rule.id)).size !== existingRules.length) {
+      throw new Error('Le regole locali contengono ID duplicati. Correggi o esporta una copia prima di importare.');
     }
   }
 
