@@ -8,12 +8,22 @@ export const DELETED_CHAT_SESSIONS_KEY = 'andros.chat.sessions.deleted.v1';
 export interface DeletedChatSession { id: string; deletedAt: number; }
 
 export function loadDeletedChatSessions(): DeletedChatSession[] {
+  const raw = localStorage.getItem(DELETED_CHAT_SESSIONS_KEY);
+  if (raw === null) return [];
+
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(localStorage.getItem(DELETED_CHAT_SESSIONS_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed.filter((item): item is DeletedChatSession =>
-      Boolean(item && typeof item.id === 'string' && item.id.trim() &&
-        typeof item.deletedAt === 'number' && Number.isFinite(item.deletedAt))) : [];
-  } catch { return []; }
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('Il registro locale delle chat eliminate è danneggiato. Per evitare che ricompaiano conversazioni eliminate, la sincronizzazione è stata interrotta.');
+  }
+  if (!Array.isArray(parsed) || !parsed.every((item) =>
+    Boolean(item && typeof item === 'object' &&
+      typeof item.id === 'string' && item.id.trim() &&
+      typeof item.deletedAt === 'number' && Number.isFinite(item.deletedAt)))) {
+    throw new Error('Il registro locale delle chat eliminate non è valido. Per sicurezza la sincronizzazione è stata interrotta.');
+  }
+  return parsed as DeletedChatSession[];
 }
 
 export function saveDeletedChatSessions(items: DeletedChatSession[]): void {
