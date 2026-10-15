@@ -38,8 +38,8 @@ function isMessage(value: unknown): value is ChatMessageData {
 
 function isRule(value: unknown): value is SyncRule {
   return isRecord(value) &&
-    typeof value.id === 'string' && Boolean(value.id.trim()) &&
-    typeof value.text === 'string' && Boolean(value.text.trim()) &&
+    typeof value.id === 'string' && Boolean(value.id.trim()) && value.id === value.id.trim() &&
+    typeof value.text === 'string' && Boolean(value.text.trim()) && value.text === value.text.trim() &&
     value.text.length <= 500 &&
     typeof value.createdAt === 'number' && Number.isFinite(value.createdAt);
 }
@@ -53,7 +53,7 @@ function isArchivedMessage(value: unknown): value is ArchivedMessage {
 
 function isConversation(value: unknown): value is ArchivedConversation {
   return isRecord(value) &&
-    typeof value.id === 'string' && Boolean(value.id.trim()) &&
+    typeof value.id === 'string' && Boolean(value.id.trim()) && value.id === value.id.trim() &&
     typeof value.title === 'string' && value.title.length <= 200 &&
     typeof value.source === 'string' && value.source.length <= 100 &&
     typeof value.importedAt === 'number' && Number.isFinite(value.importedAt) &&
