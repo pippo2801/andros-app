@@ -32,7 +32,8 @@ Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codi
 - [x] L’archivio locale rifiuta nuove aggiunte oltre 300 conversazioni invece di scartare automaticamente quelle precedenti.
 - [x] L’importazione JSON/CSV applica limiti espliciti alle conversazioni e ai messaggi; gli ZIP controllano anche il totale aggregato riconosciuto.
 - [x] Il registro delle chat eliminate applica limiti agli ID e al numero di voci, deduplica gli ID conservando la cancellazione più recente e interrompe la sincronizzazione se il registro supera il limite, invece di perdere tombstone in silenzio.
-- [x] La build web è riuscita sul commit `69a09d6b65c0c87e481a6c4dad620119a128888d`, con i controlli sul registro delle cancellazioni: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38774722636).
+- [x] La build web è riuscita sul commit `ba2c5902ceca53a94ff4ff06f256a60bf4d967cd`, con limiti e validazioni del registro delle cancellazioni sincronizzato: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38815862652).
+- [x] La validazione dei dati sincronizzati controlla anche lunghezza degli ID/titoli, dimensioni dei messaggi archiviati e timestamp opzionali prima di preparare il backup.
 - [ ] **Debito tecnico**: `package.json` e `package-lock.json` non sono sincronizzati. Per questo il workflow usa temporaneamente `npm install` invece di `npm ci`; la correzione definitiva del lockfile resta da fare.
 - [ ] La compilazione Android e il test sul POCO restano verifiche distinte, da eseguire quando richiesto.
 
@@ -44,6 +45,8 @@ FreeLLMAPI è un progetto Python che raccoglie adapter per provider, selezione/f
 
 Decisione tecnica:
 1. Non sostituire Ollama come base locale/offline: resta il percorso senza costo per richiesta e senza invio obbligatorio di prompt a terzi.
+2. FreeLLMAPI è un router API, non un agente di sviluppo che modifica repository o avvia compilazioni GitHub da solo. Per far lavorare un agente sul repository serve un runtime/integrazione GitHub con permessi e credenziali; il workflow CI separato esegue i test e la build.
+3. Se si intende usare Claude Code/GitHub Action, la sua integrazione ufficiale richiede l'autenticazione supportata da Anthropic (API key o token OAuth previsto dalla documentazione); un endpoint OpenAI-compatibile come FreeLLMAPI non è automaticamente intercambiabile. Non aggiungerlo come sostituto senza verificare compatibilità, autenticazione e costi/limiti reali.
 2. Non aggiungere FreeLLMAPI come provider primario finché il backend non è installato e testato. Sarebbe una falsa integrazione e introdurrebbe un servizio di rete necessario.
 3. Valutare FreeLLMAPI come **router cloud opzionale** solo dopo aver verificato su Termux l'installazione, un provider gratuito realmente accessibile, timeout, rate limit, privacy e fallback.
 4. Non inserire API key nel repository, nel bundle frontend o in file committati. Le chiavi di provider cloud devono restare configurabili dall'utente; per un backend condiviso usare variabili d'ambiente.
