@@ -157,6 +157,9 @@ export function importAndMergeSyncPackage(pack: SyncPackage): { rulesAdded: numb
     }
   }
   const existingArchive = loadArchivedConversationsForSync();
+  if (new Set(existingArchive.map((conversation) => conversation.id)).size !== existingArchive.length) {
+    throw new Error('L’archivio locale contiene ID duplicati. Esporta una copia e correggi l’archivio prima di importare.');
+  }
   const archiveById = new Map(existingArchive.map((conversation) => [conversation.id, conversation]));
   const importedConversations: ArchivedConversation[] = pack.conversations.map((conversation) => ({ ...conversation, messages: conversation.messages.map((message) => ({ ...message })) }));
   if (pack.currentMessages.length && pack.currentMessages.some((message) => message.content.trim())) {
