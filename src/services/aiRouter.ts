@@ -70,9 +70,11 @@ export function chooseModelForTask(
   else if (has('reasoning')) category = 'reasoning';
   else if (has('writing')) category = 'writing';
 
-  const models = installedModels.filter((model) => typeof model === 'string' && model.trim());
+  const models = Array.isArray(installedModels)
+    ? installedModels.filter((model): model is string => typeof model === 'string' && model.trim().length > 0)
+    : [];
   const matches = (model: string, patterns: RegExp[]) => patterns.some((pattern) => pattern.test(model));
-  const preference = preferredModel.trim();
+  const preference = typeof preferredModel === 'string' ? preferredModel.trim() : '';
   const find = (patterns: RegExp[]) => models.find((model) => matches(model, patterns));
 
   let selected: string | undefined;
