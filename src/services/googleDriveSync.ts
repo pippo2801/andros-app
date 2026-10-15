@@ -55,6 +55,9 @@ async function request(url: string, token: string, method = 'GET', data?: string
 }
 
 export async function signInWithGoogle(clientId: string): Promise<GoogleSession> {
+  if (typeof clientId !== 'string' || !clientId.trim()) {
+    throw new Error('Inserisci il Client ID OAuth di Google.');
+  }
   const normalizedId = clientId.trim();
   if (!normalizedId.endsWith('.apps.googleusercontent.com')) {
     throw new Error('Inserisci il Client ID OAuth di Google completo (…apps.googleusercontent.com).');
@@ -172,14 +175,24 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   // Looking only at page one could miss duplicate files and update the wrong backup.
   const matchingFiles: Array<{ id: string; name: string; modifiedTime?: string; version?: string }> = [];
   let pageToken: string | undefined;
+  const seenPageTokens = new Set<string>();
   do {
-    if (pageToken) query.set('pageToken', pageToken);
+    if (pageToken) {
+      if (seenPageTokens.has(pageToken) || seenPageTokens.size >= 1000) {
+        throw new Error('Google Drive ha restituito pagine ripetute o troppe pagine. La sincronizzazione è stata interrotta in sicurezza.');
+      }
+      seenPageTokens.add(pageToken);
+      query.set('pageToken', pageToken);
+    }
     const listed = await request(`${DRIVE_FILES}?${query.toString()}`, token);
     if (!Array.isArray(listed?.files)) {
       throw new Error('Google Drive ha restituito un elenco di backup non valido. La sincronizzazione è stata interrotta.');
     }
-    matchingFiles.push(...listed.files.filter((file: any) =>
-      file.name === APP_DATA_FILENAME && typeof file.id === 'string'));
+    matchingFiles.push(...listed.files.filter((file: unknown): file is { id: string; name: string; modifiedTime?: string; version?: string } =>
+      Boolean(file && typeof file === 'object' && !Array.isArray(file) &&
+        (file as Record<string, unknown>).name === APP_DATA_FILENAME &&
+        typeof (file as Record<string, unknown>).id === 'string' &&
+        Boolean(((file as Record<string, unknown>).id as string).trim()))));
     pageToken = typeof listed.nextPageToken === 'string' && listed.nextPageToken
       ? listed.nextPageToken
       : undefined;
@@ -229,8 +242,9 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
         typeof tombstone.deletedAt !== 'number' || !Number.isFinite(tombstone.deletedAt)) {
       throw new Error('Sincronizzazione interrotta: registro delle chat eliminate non valido. Il backup remoto non è stato sovrascritto.');
     }
-    const previous = deletedMap.get(tombstone.id);
-    if (!previous || tombstone.deletedAt > previous.deletedAt) deletedMap.set(tombstone.id, tombstone);
+    const id = tombstone.id.trim();
+    const previous = deletedMap.get(id);
+    if (!previous || tombstone.deletedAt > previous.deletedAt) deletedMap.set(id, { id, deletedAt: tombstone.deletedAt });
   }
   const deletedSessions = [...deletedMap.values()];
   const mergedSessions = mergeById(local.sessions, remote?.sessions ?? [], 'chat');
