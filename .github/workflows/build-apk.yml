@@ -1,13 +1,8 @@
 name: Build Android APK
 
+# APK creation is intentionally manual: normal commits must not generate APKs.
+# Run this workflow only when a test/release APK is explicitly requested.
 on:
-  push:
-    branches:
-      - main
-      - "feature/**"
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
