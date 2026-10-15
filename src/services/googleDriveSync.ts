@@ -38,7 +38,9 @@ async function request(url: string, token: string, method = 'GET', data?: string
   const response = await fetch(url, { method, headers, body: data });
   if (!response.ok) throw new Error(`Google Drive ha risposto con HTTP ${response.status}.`);
   if (response.status === 204) return null;
-  return response.json();
+  const responseType = response.headers.get('content-type') || '';
+  if (responseType.includes('application/json')) return response.json();
+  return response.text();
 }
 
 export async function signInWithGoogle(clientId: string): Promise<GoogleSession> {
@@ -81,6 +83,39 @@ export async function signInWithGoogle(clientId: string): Promise<GoogleSession>
   return { accessToken, email, displayName };
 }
 
+function recordTimestamp(value: unknown): number {
+  if (!value || typeof value !== 'object') return 0;
+  const item = value as Record<string, unknown>;
+  for (const key of ['updatedAt', 'updated_at', 'importedAt', 'createdAt', 'created_at', 'timestamp']) {
+    const timestamp = item[key];
+    if (typeof timestamp === 'number' && Number.isFinite(timestamp)) return timestamp;
+  }
+  return 0;
+}
+
+/**
+ * Merge records by ID without allowing an older remote copy to overwrite a
+ * newer local copy. When timestamps are absent or equal, the local record
+ * wins deterministically. Records without IDs are ignored because they cannot
+ * be safely deduplicated.
+ */
+function mergeById(local: unknown[], remote: unknown[]): unknown[] {
+  const map = new Map<string, { value: unknown; timestamp: number; source: 'local' | 'remote' }>();
+  for (const [source, values] of [['remote', remote], ['local', local]] as const) {
+    for (const value of values) {
+      if (!value || typeof value !== 'object') continue;
+      const item = value as Record<string, unknown>;
+      if (typeof item.id !== 'string' || !item.id.trim()) continue;
+      const timestamp = recordTimestamp(value);
+      const previous = map.get(item.id);
+      if (!previous || timestamp >= previous.timestamp || (source === 'local' && timestamp === previous.timestamp)) {
+        map.set(item.id, { value, timestamp, source });
+      }
+    }
+  }
+  return [...map.values()].map((entry) => entry.value);
+}
+
 export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapshot): Promise<AndrosSyncSnapshot> {
   const query = new URLSearchParams({
     spaces: 'drive',
@@ -95,22 +130,14 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
     try {
       const downloaded = await request(`${DRIVE_FILES}/${encodeURIComponent(existing.id)}?alt=media`, token);
       const parsed = typeof downloaded === 'string' ? JSON.parse(downloaded) : downloaded;
-      if (parsed?.schema === 1) remote = parsed as AndrosSyncSnapshot;
+      if (parsed?.schema === 1 && Array.isArray(parsed.archive) && Array.isArray(parsed.rules)) {
+        remote = parsed as AndrosSyncSnapshot;
+      }
     } catch {
       // A malformed remote backup is never allowed to replace local data.
     }
   }
 
-  const mergeById = (left: unknown[], right: unknown[]): unknown[] => {
-    const map = new Map<string, unknown>();
-    for (const value of [...left, ...right]) {
-      if (!value || typeof value !== 'object') continue;
-      const item = value as Record<string, unknown>;
-      if (typeof item.id !== 'string') continue;
-      map.set(item.id, value);
-    }
-    return [...map.values()];
-  };
   const merged: AndrosSyncSnapshot = {
     schema: 1,
     updatedAt: Date.now(),
