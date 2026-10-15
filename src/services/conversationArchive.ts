@@ -259,6 +259,17 @@ export function loadArchivedConversationsForSync(): ArchivedConversation[] {
 }
 
 export function saveArchivedConversations(conversations: ArchivedConversation[]): void {
+  if (!Array.isArray(conversations) || !conversations.every((item) =>
+    Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
+      typeof item.id === 'string' && item.id.trim() &&
+      typeof item.title === 'string' && typeof item.source === 'string' &&
+      typeof item.importedAt === 'number' && Number.isFinite(item.importedAt) &&
+      Array.isArray(item.messages) && item.messages.every((message) =>
+        Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
+          (message.role === 'user' || message.role === 'assistant') &&
+          typeof message.content === 'string')))) {
+    throw new Error('L’archivio contiene conversazioni non valide. I dati salvati non sono stati modificati.');
+  }
   const bounded = conversations.slice(-MAX_CONVERSATIONS);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(bounded));
