@@ -100,8 +100,11 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
       const anchor = document.createElement('a');
       anchor.href = url;
       anchor.download = 'andros-archivio-conversazioni.json';
+      anchor.style.display = 'none';
+      document.body.appendChild(anchor);
       anchor.click();
-      URL.revokeObjectURL(url);
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
       setStatus('Esportazione dell’archivio avviata.');
     } catch {
       setError('Non è stato possibile esportare l’archivio.');
