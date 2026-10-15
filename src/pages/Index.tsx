@@ -93,6 +93,7 @@ export default function Index() {
   const [settingsError, setSettingsError] = useState('');
   const [notice, setNotice] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
+  const memoryRulesInitialized = useRef(false);
 
   useEffect(() => {
     try {
@@ -155,10 +156,16 @@ export default function Index() {
   };
 
   useEffect(() => {
+    // Do not overwrite an unreadable or partially recovered stored value on first render.
+    if (!memoryRulesInitialized.current) {
+      memoryRulesInitialized.current = true;
+      return;
+    }
     try {
       localStorage.setItem(RULES_KEY, JSON.stringify(memoryRules));
     } catch (error) {
       console.warn('Impossibile salvare le regole permanenti:', error);
+      setNotice('Memoria locale piena: le ultime modifiche alle regole potrebbero non essere state salvate.');
     }
   }, [memoryRules]);
 
