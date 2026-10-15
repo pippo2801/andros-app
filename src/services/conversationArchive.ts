@@ -348,7 +348,7 @@ export function exportArchivedConversations(conversations: ArchivedConversation[
         Array.isArray(item.messages) && item.messages.every((message) =>
           Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
             (message.role === 'user' || message.role === 'assistant') &&
-            typeof message.content === 'string')))) {
+            typeof message.content === 'string'))))) {
     throw new Error('Impossibile esportare l’archivio: una o più conversazioni non sono valide.');
   }
   return JSON.stringify({ app: 'ANDROS OS', version: 1, exportedAt: new Date().toISOString(), conversations }, null, 2);
