@@ -129,9 +129,13 @@ async function postJson(url: string, data: unknown): Promise<any> {
 export async function checkOllamaConnection(): Promise<string[]> {
   const { endpoint } = getOllamaConfig();
   const data = await getJson(`${endpoint}/api/tags`);
-  return Array.isArray(data?.models)
-    ? data.models.map((model: { name?: string }) => model.name).filter(Boolean)
-    : [];
+  if (!data || typeof data !== 'object' || !Array.isArray(data.models)) return [];
+  return data.models
+    .filter((model: unknown): model is { name: string } =>
+      Boolean(model && typeof model === 'object' && !Array.isArray(model) &&
+        typeof (model as Record<string, unknown>).name === 'string' &&
+        Boolean(((model as Record<string, unknown>).name as string).trim())))
+    .map((model: { name: string }) => model.name.trim());
 }
 
 export async function sendToOllama(
@@ -144,6 +148,9 @@ export async function sendToOllama(
     (message.role === 'user' || message.role === 'assistant') &&
     typeof message.content === 'string')) {
     throw new Error('La cronologia contiene messaggi non validi. Controlla la conversazione e riprova.');
+  }
+  if (!messages.some((message) => message.role === 'user' && message.content.trim())) {
+    throw new Error('Scrivi un messaggio prima di inviare la richiesta a Ollama.');
   }
   if (!Array.isArray(approvedRules) || !approvedRules.every((rule) => typeof rule === 'string')) {
     throw new Error('Le regole permanenti non hanno un formato valido. Controllale nelle impostazioni.');
@@ -174,7 +181,7 @@ export async function sendToOllama(
     }
     return content;
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = error instanceof Error ? error.message : 'Errore di rete o risposta non riconosciuta.';
     throw new Error(
       `Non riesco a raggiungere Ollama (${config.endpoint}). ${detail} Controlla che Ollama sia avviato, che l’indirizzo sia corretto e che il modello “${model}” sia installato.`,
     );
