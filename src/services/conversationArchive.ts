@@ -325,7 +325,13 @@ export function searchArchivedConversations(conversations: ArchivedConversation[
   if (!terms.length) return [];
   const matches: Array<{ conversation: ArchivedConversation; message: ArchivedMessage }> = [];
   for (const conversation of conversations) {
+    if (!conversation || typeof conversation !== 'object' || Array.isArray(conversation) ||
+        typeof conversation.title !== 'string' || typeof conversation.source !== 'string' ||
+        !Array.isArray(conversation.messages)) continue;
     for (const message of conversation.messages) {
+      if (!message || typeof message !== 'object' || Array.isArray(message) ||
+          typeof message.content !== 'string' ||
+          (message.role !== 'user' && message.role !== 'assistant')) continue;
       const haystack = conversation.title + ' ' + message.content + ' ' + conversation.source;
       if (terms.every((term) => haystack.toLocaleLowerCase().includes(term))) matches.push({ conversation, message });
     }
@@ -334,8 +340,16 @@ export function searchArchivedConversations(conversations: ArchivedConversation[
 }
 
 export function exportArchivedConversations(conversations: ArchivedConversation[]): string {
-  if (!Array.isArray(conversations)) {
-    throw new Error('Impossibile esportare l’archivio: l’elenco delle conversazioni non è valido.');
+  if (!Array.isArray(conversations) || !conversations.every((item) =>
+      Boolean(item && typeof item === 'object' && !Array.isArray(item) &&
+        typeof item.id === 'string' && item.id.trim() &&
+        typeof item.title === 'string' && typeof item.source === 'string' &&
+        typeof item.importedAt === 'number' && Number.isFinite(item.importedAt) &&
+        Array.isArray(item.messages) && item.messages.every((message) =>
+          Boolean(message && typeof message === 'object' && !Array.isArray(message) &&
+            (message.role === 'user' || message.role === 'assistant') &&
+            typeof message.content === 'string')))) {
+    throw new Error('Impossibile esportare l’archivio: una o più conversazioni non sono valide.');
   }
   return JSON.stringify({ app: 'ANDROS OS', version: 1, exportedAt: new Date().toISOString(), conversations }, null, 2);
 }
