@@ -321,7 +321,8 @@ export function searchArchivedConversations(conversations: ArchivedConversation[
   message: ArchivedMessage;
 }> {
   if (!Array.isArray(conversations) || typeof query !== 'string') return [];
-  const terms = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const normalizeSearch = (value: string) => value.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const terms = normalizeSearch(query).split(/\s+/).filter(Boolean);
   if (!terms.length) return [];
   const matches: Array<{ conversation: ArchivedConversation; message: ArchivedMessage }> = [];
   for (const conversation of conversations) {
@@ -333,7 +334,7 @@ export function searchArchivedConversations(conversations: ArchivedConversation[
           typeof message.content !== 'string' ||
           (message.role !== 'user' && message.role !== 'assistant')) continue;
       const haystack = conversation.title + ' ' + message.content + ' ' + conversation.source;
-      if (terms.every((term) => haystack.toLocaleLowerCase().includes(term))) matches.push({ conversation, message });
+      if (terms.every((term) => normalizeSearch(haystack).includes(term))) matches.push({ conversation, message });
     }
   }
   return matches.slice(0, 100);
