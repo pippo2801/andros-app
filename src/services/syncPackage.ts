@@ -93,6 +93,7 @@ export function createSyncPackage(currentMessages: ChatMessageData[], rules: Syn
     rules: rules.map((rule) => ({ ...rule })),
     conversations: archive,
   };
+  validatePackage(pack);
   const bytes = new TextEncoder().encode(JSON.stringify(pack)).byteLength;
   if (bytes > MAX_PACKAGE_BYTES) {
     throw new Error('Il pacchetto supera 15 MB. Riduci l’archivio ed esporta di nuovo.');
