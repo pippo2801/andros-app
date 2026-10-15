@@ -179,7 +179,7 @@ export function loadChatSessionState(): ChatSessionState {
 export function saveChatSessionState(state: ChatSessionState): void {
   if (!state || typeof state.activeId !== 'string' || !Array.isArray(state.sessions) ||
       state.sessions.length === 0 || !state.sessions.every(validSession)) {
-    throw new Error('Le stato delle conversazioni non è valido. I dati salvati non sono stati modificati.');
+    throw new Error('Lo stato delle conversazioni non è valido. I dati salvati non sono stati modificati.');
   }
   const ids = new Set(state.sessions.map((session) => session.id));
   if (ids.size !== state.sessions.length || !ids.has(state.activeId)) {
