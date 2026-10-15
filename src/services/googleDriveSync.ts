@@ -143,7 +143,8 @@ function mergeById(local: unknown[], remote: unknown[], label: string): unknown[
              (message as Record<string, unknown>).role === 'assistant') &&
             typeof (message as Record<string, unknown>).content === 'string'));
       } else if (label === 'regole') {
-        validRecord = typeof item.text === 'string' &&
+        validRecord = typeof item.text === 'string' && Boolean(item.text.trim()) &&
+          item.text === item.text.trim() && item.text.length <= 500 &&
           typeof item.createdAt === 'number' && Number.isFinite(item.createdAt);
       }
       if (!validRecord) {
