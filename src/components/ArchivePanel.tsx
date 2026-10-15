@@ -29,7 +29,8 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
 
   const persist = (next: ArchivedConversation[]) => {
     saveArchivedConversations(next);
-    setConversations(next);
+    // The storage layer caps the archive; reload it so the UI never shows unsaved entries.
+    setConversations(loadArchivedConversations());
   };
 
   const saveCurrentConversation = () => {
