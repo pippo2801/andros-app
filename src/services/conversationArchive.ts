@@ -21,6 +21,13 @@ const MAX_ID_LENGTH = 200;
 const MAX_TITLE_LENGTH = 200;
 const MAX_SOURCE_LENGTH = 100;
 
+function requireMessageLength(content: string): string {
+  if (content.length > MAX_MESSAGE_LENGTH) {
+    throw new Error(`Un messaggio supera il limite di ${MAX_MESSAGE_LENGTH} caratteri. Il contenuto non è stato troncato: l'importazione è stata interrotta per evitare perdita di dati.`);
+  }
+  return content;
+}
+
 function textFromContent(value: unknown): string {
   if (typeof value === 'string') return value;
   if (Array.isArray(value)) return value.map(textFromContent).filter(Boolean).join('\n');
@@ -173,9 +180,9 @@ function parseCsv(text: string, name: string): ArchivedConversation[] {
     const response = responseIndex >= 0 ? (values[responseIndex] || '').trim() : '';
     const otherText = values.filter((value, column) => column !== dateIndex && column !== titleIndex).map((value) => value.trim()).filter(Boolean);
     const messages: ArchivedMessage[] = [];
-    if (prompt) messages.push({ role: 'user', content: prompt.slice(0, MAX_MESSAGE_LENGTH) });
-    if (response) messages.push({ role: 'assistant', content: response.slice(0, MAX_MESSAGE_LENGTH) });
-    if (!messages.length && otherText.length) messages.push({ role: 'user', content: otherText.join('\n').slice(0, MAX_MESSAGE_LENGTH) });
+    if (prompt) messages.push({ role: 'user', content: requireMessageLength(prompt) });
+    if (response) messages.push({ role: 'assistant', content: requireMessageLength(response) });
+    if (!messages.length && otherText.length) messages.push({ role: 'user', content: requireMessageLength(otherText.join('\n')) });
     if (!messages.length) return;
     output.push({
       id: `csv-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
@@ -198,9 +205,9 @@ function parsePlainText(text: string, name: string): ArchivedConversation[] {
     if (!match) continue;
     const role = normalizeRole(match[1]);
     const content = match[2].trim();
-    if (role && content) messages.push({ role, content: content.slice(0, MAX_MESSAGE_LENGTH) });
+    if (role && content) messages.push({ role, content: requireMessageLength(content) });
   }
-  if (!messages.length) messages.push({ role: 'user', content: cleaned.slice(0, MAX_MESSAGE_LENGTH) });
+  if (!messages.length) messages.push({ role: 'user', content: requireMessageLength(cleaned) });
   return [{
     id: `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     title: name.replace(/\.[^.]+$/, '') || 'Testo importato',
