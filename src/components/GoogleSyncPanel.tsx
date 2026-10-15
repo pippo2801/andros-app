@@ -57,7 +57,8 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
         }
         if (!Array.isArray(parsed) || !parsed.every((rule) =>
           Boolean(rule && typeof rule === 'object' &&
-            typeof rule.id === 'string' && typeof rule.text === 'string' &&
+            typeof rule.id === 'string' && Boolean(rule.id.trim()) && rule.id === rule.id.trim() &&
+            typeof rule.text === 'string' && Boolean(rule.text.trim()) && rule.text === rule.text.trim() && rule.text.length <= 500 &&
             typeof rule.createdAt === 'number' && Number.isFinite(rule.createdAt)))) {
           throw new Error('Le regole permanenti locali non hanno un formato valido. La sincronizzazione è stata interrotta per proteggere il backup.');
         }
