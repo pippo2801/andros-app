@@ -100,8 +100,9 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
       }
       const validArchive = merged.archive.every((item) =>
         isRecord(item) && typeof item.id === 'string' && Boolean(item.id.trim()) &&
-        typeof item.title === 'string' && Array.isArray(item.messages) &&
-        item.messages.every((message) =>
+        typeof item.title === 'string' && typeof item.source === 'string' &&
+        typeof item.importedAt === 'number' && Number.isFinite(item.importedAt) &&
+        Array.isArray(item.messages) && item.messages.every((message) =>
           isRecord(message) &&
           (message.role === 'user' || message.role === 'assistant') &&
           typeof message.content === 'string'));
