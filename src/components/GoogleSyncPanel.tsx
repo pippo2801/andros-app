@@ -109,14 +109,38 @@ export const GoogleSyncPanel: React.FC<GoogleSyncPanelProps> = ({ onClose, onSyn
         throw new Error('L’archivio unito dalla sincronizzazione non è valido. I dati locali non sono stati aggiornati.');
       }
 
-      // All records are validated before the first local write.
-      saveArchivedConversations(merged.archive as ReturnType<typeof loadArchivedConversations>);
-      localStorage.setItem(RULES_KEY, JSON.stringify(validRules));
-      saveDeletedChatSessions(merged.deletedSessions);
+      // Snapshot the current values so a quota/write error does not leave a half-applied sync.
+      const storageKeys = [
+        'andros.archive.conversations.v1',
+        RULES_KEY,
+        'andros.chat.sessions.deleted.v1',
+        'andros.chat.sessions.v1',
+      ] as const;
+      const previousValues = storageKeys.map((key) => ({ key, value: localStorage.getItem(key) }));
       const activeId = validSessions.some((item) => item.id === chatState.activeId)
         ? chatState.activeId
         : validSessions[0]?.id || chatState.activeId;
-      saveChatSessionState({ activeId, sessions: validSessions as ChatSession[] });
+      try {
+        // All records are validated before the first local write.
+        saveArchivedConversations(merged.archive as ReturnType<typeof loadArchivedConversations>);
+        localStorage.setItem(RULES_KEY, JSON.stringify(validRules));
+        saveDeletedChatSessions(merged.deletedSessions);
+        saveChatSessionState({ activeId, sessions: validSessions as ChatSession[] });
+      } catch (writeError) {
+        let rollbackFailed = false;
+        for (const previous of previousValues.reverse()) {
+          try {
+            if (previous.value === null) localStorage.removeItem(previous.key);
+            else localStorage.setItem(previous.key, previous.value);
+          } catch {
+            rollbackFailed = true;
+          }
+        }
+        if (rollbackFailed) {
+          throw new Error('La sincronizzazione non è riuscita e il ripristino locale è stato incompleto. Controlla chat, archivio e memoria prima di riprovare.');
+        }
+        throw writeError;
+      }
       onSynced({ rules: validRules as MemoryRule[], sessions: validSessions as ChatSession[] });
       setStatus(`Sincronizzazione completata: ${validSessions.length} chat, ${merged.archive.length} conversazioni archiviate e ${validRules.length} regole disponibili su Google Drive.`);
     } catch (cause) {
