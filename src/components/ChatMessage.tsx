@@ -29,7 +29,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
         
         <button
           onClick={handleCopy}
-          className="absolute top-2 right-2 p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+          className="absolute top-2 right-2 p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
           title="Copia testo"
         >
           {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
