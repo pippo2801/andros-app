@@ -3,6 +3,34 @@ import type { ChatMessageData } from './ollama';
 export const CHAT_SESSIONS_KEY = 'andros.chat.sessions.v1';
 export const LEGACY_HISTORY_KEY = 'andros.chat.history.v1';
 export const MAX_PINNED_CHATS = 30;
+export const DELETED_CHAT_SESSIONS_KEY = 'andros.chat.sessions.deleted.v1';
+
+export interface DeletedChatSession { id: string; deletedAt: number; }
+
+export function loadDeletedChatSessions(): DeletedChatSession[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DELETED_CHAT_SESSIONS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((item): item is DeletedChatSession =>
+      Boolean(item && typeof item.id === 'string' && item.id.trim() &&
+        typeof item.deletedAt === 'number' && Number.isFinite(item.deletedAt))) : [];
+  } catch { return []; }
+}
+
+export function saveDeletedChatSessions(items: DeletedChatSession[]): void {
+  const latest = new Map<string, DeletedChatSession>();
+  for (const item of items) {
+    if (!item || typeof item.id !== 'string' || !item.id.trim() ||
+        typeof item.deletedAt !== 'number' || !Number.isFinite(item.deletedAt)) continue;
+    const previous = latest.get(item.id);
+    if (!previous || item.deletedAt > previous.deletedAt) latest.set(item.id, item);
+  }
+  localStorage.setItem(DELETED_CHAT_SESSIONS_KEY, JSON.stringify([...latest.values()]));
+}
+
+export function recordDeletedChatSession(id: string): void {
+  if (!id.trim()) return;
+  saveDeletedChatSessions([...loadDeletedChatSessions(), { id, deletedAt: Date.now() }]);
+}
 
 export interface ChatSession {
   id: string;
