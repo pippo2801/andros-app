@@ -12,6 +12,13 @@ Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codi
 - [ ] **Immagini in ingresso**: implementazione presente nella PR #27 (`feat/image-attachments`), ma la PR è ancora aperta e in bozza; non va considerata integrata in `main` finché non viene verificata e unita.
 - [ ] **Generazione/modifica immagini**: non è la stessa cosa dell'allegare un'immagine alla chat; resta un modulo distinto.
 
+## CI e creazione APK
+
+- [x] Il workflow `.github/workflows/build-apk.yml` è manuale (`workflow_dispatch`): i normali commit non devono creare APK.
+- [x] Il workflow `.github/workflows/verify.yml` esegue `npm ci` e `npm run build` senza compilare APK, per controllare le modifiche web.
+- [ ] La verifica CI del workflow separato deve concludersi con successo dopo il commit che lo introduce.
+- [ ] La compilazione Android e il test sul POCO restano verifiche distinte, da eseguire quando richiesto.
+
 ## Valutazione di FreeLLMAPI
 
 Repository esaminato: [RealTask/free-llm-api](https://github.com/RealTask/free-llm-api).
