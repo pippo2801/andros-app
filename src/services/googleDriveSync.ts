@@ -89,13 +89,17 @@ function recordTimestamp(value: unknown): number {
 }
 
 /** Merge by ID; newer timestamp wins, with local data winning ties or missing timestamps. */
-function mergeById(local: unknown[], remote: unknown[]): unknown[] {
+function mergeById(local: unknown[], remote: unknown[], label: string): unknown[] {
   const map = new Map<string, { value: unknown; timestamp: number }>();
   for (const [source, values] of [['remote', remote], ['local', local]] as const) {
     for (const value of values) {
-      if (!value || typeof value !== 'object') continue;
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error(`Sincronizzazione interrotta: elemento non valido in ${label}. Nessun backup è stato sovrascritto.`);
+      }
       const item = value as Record<string, unknown>;
-      if (typeof item.id !== 'string' || !item.id.trim()) continue;
+      if (typeof item.id !== 'string' || !item.id.trim()) {
+        throw new Error(`Sincronizzazione interrotta: un elemento di ${label} non ha un ID valido. Nessun backup è stato sovrascritto.`);
+      }
       const timestamp = recordTimestamp(value);
       const previous = map.get(item.id);
       if (!previous || timestamp > previous.timestamp || (source === 'local' && timestamp === previous.timestamp)) {
@@ -151,9 +155,9 @@ export async function syncAndrosSnapshot(token: string, local: AndrosSyncSnapsho
   const merged: AndrosSyncSnapshot = {
     schema: 2,
     updatedAt: Date.now(),
-    archive: mergeById(local.archive, remote?.archive ?? []),
-    rules: mergeById(local.rules, remote?.rules ?? []),
-    sessions: mergeById(local.sessions, remote?.sessions ?? []),
+    archive: mergeById(local.archive, remote?.archive ?? [], 'archivio'),
+    rules: mergeById(local.rules, remote?.rules ?? [], 'regole'),
+    sessions: mergeById(local.sessions, remote?.sessions ?? [], 'chat'),
   };
   const body = JSON.stringify(merged);
   if (existing?.id) {
