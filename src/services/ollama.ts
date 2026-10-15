@@ -21,11 +21,18 @@ export function getOllamaConfig(): OllamaConfig {
   try {
     const saved = localStorage.getItem(CONFIG_KEY);
     if (saved) {
-      const parsed = JSON.parse(saved) as Partial<OllamaConfig>;
-      return {
-        endpoint: (parsed.endpoint || DEFAULT_CONFIG.endpoint).trim().replace(/\/+$/, ''),
-        model: (parsed.model || DEFAULT_CONFIG.model).trim(),
-      };
+      const parsed: unknown = JSON.parse(saved);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('Formato configurazione Ollama non valido.');
+      }
+      const values = parsed as Partial<OllamaConfig>;
+      const endpoint = typeof values.endpoint === 'string' && values.endpoint.trim()
+        ? values.endpoint.trim().replace(/\/+$/, '')
+        : DEFAULT_CONFIG.endpoint;
+      const model = typeof values.model === 'string' && values.model.trim()
+        ? values.model.trim()
+        : DEFAULT_CONFIG.model;
+      return { endpoint, model };
     }
   } catch (error) {
     console.warn('Impossibile leggere la configurazione di Andros:', error);
