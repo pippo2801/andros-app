@@ -206,6 +206,10 @@ export async function parseArchiveUpload(file: File): Promise<ArchivedConversati
     throw new Error('Archivio ZIP non valido o danneggiato.');
   }
   const entries = Object.entries(files).filter(([path]) => !path.startsWith('__MACOSX/') && !path.endsWith('/'));
+  const expandedBytes = entries.reduce((total, [, bytes]) => total + bytes.byteLength, 0);
+  if (entries.length > 5000 || expandedBytes > 200 * 1024 * 1024) {
+    throw new Error('Lo ZIP contiene troppi file o supera 200 MB una volta estratto. Dividi l’archivio e riprova.');
+  }
   const chatJson = entries.filter(([path]) => /(^|\/)conversations(?:_\d+)?\.json$/i.test(path));
   const conversations: ArchivedConversation[] = [];
   for (const [path, bytes] of chatJson) {
