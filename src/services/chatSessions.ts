@@ -182,7 +182,8 @@ export function saveChatSessionState(state: ChatSessionState): void {
   }
   const sessions = state.sessions
     .slice()
-    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
+    .map((session, index) => ({ ...session, pinned: index < MAX_PINNED_CHATS && session.pinned }));
   localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify({ activeId: state.activeId, sessions }));
 }
 
