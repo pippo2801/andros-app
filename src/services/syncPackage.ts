@@ -144,6 +144,16 @@ export function importAndMergeSyncPackage(pack: SyncPackage): { rulesAdded: numb
     }
   }
 
+  // An ID collision with different text would create ambiguous rules that later
+  // fail cloud-sync validation. Detect it before changing either local dataset.
+  const existingRulesById = new Map(existingRules.map((rule) => [rule.id, rule]));
+  for (const rule of pack.rules) {
+    const existingById = existingRulesById.get(rule.id);
+    if (existingById && existingById.text !== rule.text) {
+      throw new Error('Il pacchetto contiene una regola con un ID già usato per un testo diverso. L’importazione è stata interrotta senza modificare i dati locali.');
+    }
+  }
+
   const rulesByText = new Map(existingRules.map((rule) => [rule.text.trim().toLocaleLowerCase(), rule]));
   let rulesAdded = 0;
   for (const rule of pack.rules) {
