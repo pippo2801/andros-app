@@ -76,13 +76,17 @@ export function createSyncPackage(currentMessages: ChatMessageData[], rules: Syn
       !Array.isArray(rules) || rules.length > MAX_RULES || !rules.every(isRule)) {
     throw new Error('Impossibile esportare: cronologia corrente o regole permanenti non valide.');
   }
+  const archive = loadArchivedConversationsForSync();
+  if (archive.length > MAX_CONVERSATIONS) {
+    throw new Error('L’archivio contiene più di 300 conversazioni. Esporta o riduci l’archivio prima di creare il pacchetto, per non perdere dati.');
+  }
   const pack: SyncPackage = {
     app: 'ANDROS OS',
     version: 1,
     exportedAt: new Date().toISOString(),
     currentMessages: currentMessages.map((message) => ({ ...message })),
     rules: rules.map((rule) => ({ ...rule })),
-    conversations: loadArchivedConversationsForSync().slice(-MAX_CONVERSATIONS),
+    conversations: archive,
   };
   const bytes = new TextEncoder().encode(JSON.stringify(pack)).byteLength;
   if (bytes > MAX_PACKAGE_BYTES) {
@@ -121,6 +125,9 @@ export function importAndMergeSyncPackage(pack: SyncPackage): { rulesAdded: numb
       throw new Error('Le regole locali non sono valide. Il pacchetto non è stato importato.');
     }
     existingRules = parsedRules;
+    if (existingRules.length > MAX_RULES) {
+      throw new Error('Le regole locali superano il limite supportato di 500. Esporta una copia e riduci l’elenco prima di importare.');
+    }
   }
 
   const rulesByText = new Map(existingRules.map((rule) => [rule.text.trim().toLocaleLowerCase(), rule]));
@@ -152,7 +159,7 @@ export function importAndMergeSyncPackage(pack: SyncPackage): { rulesAdded: numb
     }
   }
 
-  const nextRules = [...rulesByText.values()].slice(-MAX_RULES);
+  const nextRules = [...rulesByText.values()];
   const nextArchive = [...archiveById.values()].slice(-MAX_CONVERSATIONS);
   const oldRules = rawRules;
   const oldArchive = localStorage.getItem('andros.archive.conversations.v1');
