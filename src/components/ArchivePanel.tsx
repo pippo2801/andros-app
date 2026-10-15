@@ -3,6 +3,7 @@ import { Archive, Search, Upload, Download, Trash2, X, MessageSquareText, FileTe
 import {
   exportArchivedConversations,
   loadArchivedConversations,
+  loadArchivedConversationsForSync,
   parseArchiveUpload,
   saveArchivedConversations,
   searchArchivedConversations,
@@ -29,6 +30,8 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({ onClose, onLoadConve
   const results = useMemo(() => searchArchivedConversations(conversations, query), [conversations, query]);
 
   const persist = (next: ArchivedConversation[]) => {
+    // Refuse to overwrite malformed persisted data just because the lenient UI loader recovered an empty list.
+    loadArchivedConversationsForSync();
     saveArchivedConversations(next);
     // The storage layer caps the archive; reload it so the UI never shows unsaved entries.
     setConversations(loadArchivedConversations());
