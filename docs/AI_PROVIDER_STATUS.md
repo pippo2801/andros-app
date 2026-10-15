@@ -33,6 +33,7 @@ Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codi
 - [x] L’archivio locale rifiuta nuove aggiunte oltre 300 conversazioni invece di scartare automaticamente quelle precedenti.
 - [x] L’importazione JSON/CSV applica limiti espliciti alle conversazioni e ai messaggi; gli ZIP controllano anche il totale aggregato riconosciuto.
 - [x] L’importazione delle conversazioni ChatGPT e dei formati JSON/CSV/testuali non tronca più silenziosamente messaggi troppo lunghi: segnala il limite e interrompe l'importazione, e controlla anche il numero di nodi/messaggi per conversazione.
+- [x] I metadati delle conversazioni importate ora rispettano anche i limiti locali per titolo e origine, evitando che un nome lungo faccia fallire il salvataggio dell'intero archivio; build verificata: [run riuscito](https://github.com/pippo2801/andros-app/actions/runs/38817962303).
 - [x] Il registro delle chat eliminate applica limiti agli ID e al numero di voci, deduplica gli ID conservando la cancellazione più recente e interrompe la sincronizzazione se il registro supera il limite, invece di perdere tombstone in silenzio.
 - [x] La build web è riuscita sul commit `ba2c5902ceca53a94ff4ff06f256a60bf4d967cd`, con limiti e validazioni del registro delle cancellazioni sincronizzato: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38815862652).
 - [x] La validazione dei dati sincronizzati controlla anche lunghezza degli ID/titoli, dimensioni dei messaggi archiviati e timestamp opzionali prima di preparare il backup.
