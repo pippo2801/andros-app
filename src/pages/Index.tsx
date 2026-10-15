@@ -474,7 +474,13 @@ export default function Index() {
       {googleOpen && (
         <GoogleSyncPanel
           onClose={() => setGoogleOpen(false)}
-          onSynced={(rules) => setMemoryRules(rules.filter((rule) => rule && typeof rule.id === 'string' && typeof rule.text === 'string' && typeof rule.createdAt === 'number'))}
+          onSynced={({ rules, sessions: syncedSessions }) => {
+            setMemoryRules(rules);
+            setSessions(syncedSessions);
+            if (syncedSessions.length && !syncedSessions.some((item) => item.id === activeChatId)) {
+              setActiveChatId(syncedSessions[0].id);
+            }
+          }}
         />
       )}
 
