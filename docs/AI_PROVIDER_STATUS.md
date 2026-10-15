@@ -31,7 +31,8 @@ Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codi
 - [x] Trasferimento manuale JSON collegato alle impostazioni: include chat corrente, archivio e regole; valida i pacchetti e impedisce di superare i limiti senza avvisare.
 - [x] L’archivio locale rifiuta nuove aggiunte oltre 300 conversazioni invece di scartare automaticamente quelle precedenti.
 - [x] L’importazione JSON/CSV applica limiti espliciti alle conversazioni e ai messaggi; gli ZIP controllano anche il totale aggregato riconosciuto.
-- [x] La build web è riuscita sul commit `9640f37e02d5895ebbf8a1f2cae92e5c2f002b67`, dopo le nuove protezioni d’importazione: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38765049933).
+- [x] Il registro delle chat eliminate applica limiti agli ID e al numero di voci, deduplica gli ID conservando la cancellazione più recente e interrompe la sincronizzazione se il registro supera il limite, invece di perdere tombstone in silenzio.
+- [x] La build web è riuscita sul commit `69a09d6b65c0c87e481a6c4dad620119a128888d`, con i controlli sul registro delle cancellazioni: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38774722636).
 - [ ] **Debito tecnico**: `package.json` e `package-lock.json` non sono sincronizzati. Per questo il workflow usa temporaneamente `npm install` invece di `npm ci`; la correzione definitiva del lockfile resta da fare.
 - [ ] La compilazione Android e il test sul POCO restano verifiche distinte, da eseguire quando richiesto.
 
