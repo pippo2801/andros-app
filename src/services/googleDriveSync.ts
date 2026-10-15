@@ -111,6 +111,7 @@ function recordTimestamp(value: unknown): number {
 function mergeById(local: unknown[], remote: unknown[], label: string): unknown[] {
   const map = new Map<string, { value: unknown; timestamp: number }>();
   for (const [source, values] of [['remote', remote], ['local', local]] as const) {
+    const sourceIds = new Set<string>();
     for (const value of values) {
       if (!value || typeof value !== 'object' || Array.isArray(value)) {
         throw new Error(`Sincronizzazione interrotta: elemento non valido in ${label}. Nessun backup è stato sovrascritto.`);
@@ -119,6 +120,10 @@ function mergeById(local: unknown[], remote: unknown[], label: string): unknown[
       if (typeof item.id !== 'string' || !item.id.trim() || item.id !== item.id.trim()) {
         throw new Error(`Sincronizzazione interrotta: un elemento di ${label} non ha un ID valido. Nessun backup è stato sovrascritto.`);
       }
+      if (sourceIds.has(item.id)) {
+        throw new Error(`Sincronizzazione interrotta: ${source === 'local' ? 'i dati locali' : 'il backup Google Drive'} contengono ID duplicati in ${label}. Nessun backup è stato sovrascritto.`);
+      }
+      sourceIds.add(item.id);
       // Validate the fields consumed by the app before including remote records
       // in a new backup. Otherwise the UI could silently discard them after upload.
       const validMessages = (messages: unknown): boolean =>
