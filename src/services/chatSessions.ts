@@ -97,6 +97,37 @@ export function createChatSession(messages: ChatMessageData[] = [WELCOME_MESSAGE
   };
 }
 
+/** Strict loader for cloud sync: do not turn corrupt session storage into a fresh chat. */
+export function loadChatSessionStateForSync(): ChatSessionState {
+  const raw = localStorage.getItem(CHAT_SESSIONS_KEY);
+  // A first run may not have the new key yet; preserve the existing legacy migration path.
+  if (raw === null) return loadChatSessionState();
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('Le chat locali sono danneggiate. La sincronizzazione è stata interrotta per proteggere le conversazioni presenti su Google Drive.');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Le chat locali non hanno un formato valido. La sincronizzazione è stata interrotta per proteggere il backup.');
+  }
+  const state = parsed as Partial<ChatSessionState>;
+  if (!Array.isArray(state.sessions) || state.sessions.length === 0 ||
+      !state.sessions.every(validSession) ||
+      typeof state.activeId !== 'string' ||
+      !state.sessions.some((session) => session.id === state.activeId)) {
+    throw new Error('Le chat locali sono incomplete o non valide. La sincronizzazione è stata interrotta per proteggere il backup.');
+  }
+  return {
+    activeId: state.activeId,
+    sessions: state.sessions
+      .slice()
+      .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
+      .map((session, index) => ({ ...session, pinned: index < MAX_PINNED_CHATS && session.pinned })),
+  };
+}
+
 export function loadChatSessionState(): ChatSessionState {
   try {
     const raw = localStorage.getItem(CHAT_SESSIONS_KEY);
