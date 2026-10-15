@@ -30,7 +30,7 @@ Aggiornato: 2026-10-15. Questo documento distingue le funzioni presenti nel codi
 - [x] Il workflow `.github/workflows/verify.yml` esegue `npm install` e `npm run build` senza compilare APK.
 - [x] Trasferimento manuale JSON collegato alle impostazioni: include chat corrente, archivio e regole; valida i pacchetti e impedisce di superare i limiti senza avvisare.
 - [x] L’archivio locale rifiuta nuove aggiunte oltre 300 conversazioni invece di scartare automaticamente quelle precedenti.
-- [x] La build web è riuscita sul commit `b37d513e40b7c054b01f7a5b2358031a75eea6f6`, che include la sincronizzazione dei tombstone: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38734892946).
+- [x] La build web è riuscita sul commit `88cfb4706146a131d10f3e4b884e765032a48596`, dopo la correzione della validazione dell’archivio: [apri il run](https://github.com/pippo2801/andros-app/actions/runs/38760338557).
 - [ ] **Debito tecnico**: `package.json` e `package-lock.json` non sono sincronizzati. Per questo il workflow usa temporaneamente `npm install` invece di `npm ci`; la correzione definitiva del lockfile resta da fare.
 - [ ] La compilazione Android e il test sul POCO restano verifiche distinte, da eseguire quando richiesto.
 
