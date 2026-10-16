@@ -261,8 +261,9 @@ export default function Index() {
 
   const handleSend = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const text = input.trim();
-    if (!text || loading) return;
+    // Preserve leading/trailing whitespace in code and prompts; only reject whitespace-only input.
+    const text = input;
+    if (!text.trim() || loading) return;
 
     const chatIdAtSend = activeChatId;
     const updatedMessages: ChatMessageData[] = [...messages, { role: 'user', content: text }];
