@@ -13,7 +13,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
   const [copiedBlock, setCopiedBlock] = useState<number | null>(null);
   const [failedBlock, setFailedBlock] = useState<number | null>(null);
 
-  const segments = content.split(/(```[^\\n]*\\n[\\s\\S]*?```)/g);
+  const segments = content.split(/(```[^\n]*\n[\s\S]*?```)/g);
   const copyCodeBlock = async (code: string, index: number) => {
     setFailedBlock(null);
     try {
