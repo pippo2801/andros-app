@@ -22,6 +22,7 @@ Aggiornato: 2026-10-16. Questo documento distingue le funzioni presenti nel codi
 - [x] Anche le chat locali e i record scaricati da Drive vengono controllati prima di preparare il nuovo backup; chat, archivio o regole incompleti causano l'interruzione anziché essere scartati silenziosamente dopo la scrittura.
 - [ ] **Test reale OAuth/Drive**: non ancora verificato con un Client ID OAuth Android valido e un account Google.
 - [ ] **Test delle cancellazioni tra dispositivi**: provare su due dispositivi login, sincronizzazione, eliminazione offline e sincronizzazione successiva; verificare anche conflitti e recupero da interruzioni.
+- [x] Prima della decompressione ZIP, Andros legge la directory centrale e rifiuta metadati incoerenti, ZIP64 non supportati, più di 5.000 voci o una dimensione espansa dichiarata oltre 200 MB; resta comunque necessario testare archivi ostili e casi limite della libreria di decompressione.
 - [ ] **Limiti di spazio e grandi archivi**: testare dimensioni, errori di quota e recupero dopo interruzioni prima di affidarsi alla sincronizzazione come unico backup.
 
 ## CI e creazione APK
