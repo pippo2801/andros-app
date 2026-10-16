@@ -9,9 +9,53 @@ export interface RouteDecision {
   category: 'coding' | 'reasoning' | 'writing' | 'general' | 'vision';
 }
 
+const TASK_TERMS: Record<RouteDecision['category'], string[]> = {
+  vision: [
+    'immagine', 'immagini', 'foto', 'fotografia', 'screenshot', 'vision',
+    'analizza questa figura', 'image', 'images', 'photo', 'picture',
+    'screenshot of', 'look at this', 'what is in this image', 'imagen', 'foto de',
+  ],
+  coding: [
+    'codice', 'programma', 'programmazione', 'python', 'javascript',
+    'typescript', 'react', 'bug', 'errore', 'debug', 'apk', 'android',
+    'gradle', 'git', 'script', 'funzione', 'classe', 'compila',
+    'code', 'coding', 'programming', 'debugging', 'compile', 'compiler',
+    'repository', 'pull request', 'unit test', 'function', 'build an app',
+    'write a script', 'stack trace',
+  ],
+  reasoning: [
+    'dimostra', 'confronta', 'analizza', 'ragiona', 'pro e contro',
+    'strategia', 'piano', 'perché', 'spiegami in dettaglio', 'valuta',
+    'reason', 'reasoning', 'compare', 'analyze', 'analyse', 'pros and cons',
+    'strategy', 'plan', 'why does', 'explain in detail', 'evaluate',
+    'think through', 'trade-off', 'tradeoff',
+  ],
+  writing: [
+    'scrivi', 'riscrivi', 'email', 'messaggio', 'articolo', 'riassumi',
+    'traduci', 'correggi il testo', 'descrizione', 'write', 'rewrite',
+    'draft', 'summarize', 'summary', 'translate', 'proofread', 'essay',
+    'message', 'article', 'description', 'make this clearer',
+  ],
+  general: [],
+};
+
+function normalizeForMatching(value: string): string {
+  return value
+    .toLocaleLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}_]+/gu, ' ')
+    .trim();
+}
+
 /**
- * A deterministic, free-first router for models already installed in Ollama.
- * It never sends a prompt to a paid provider or uploads it to a third party.
+ * Deterministic, free-first routing for models already installed in Ollama.
+ * It does not contact a cloud provider or transmit prompts.
+ *
+ * Matching uses normalized whole words/phrases to avoid accidental hits such
+ * as "git" inside "digital" or "vision" inside "television". This remains
+ * keyword-based routing, not semantic intent detection. Priority is vision,
+ * coding, reasoning, then writing; otherwise use the preferred/first model.
  */
 export function chooseModelForTask(
   prompt: string,
@@ -19,23 +63,27 @@ export function chooseModelForTask(
   preferredModel: string,
   hasImages = false,
 ): RouteDecision {
-  const text = prompt.toLocaleLowerCase();
-  const has = (...terms: string[]) => terms.some((term) => text.includes(term));
+  const safePrompt = typeof prompt === 'string' ? prompt : '';
+  const text = normalizeForMatching(safePrompt);
+  const has = (category: Exclude<RouteDecision['category'], 'general'>) =>
+    TASK_TERMS[category].some((term) => {
+      const normalizedTerm = normalizeForMatching(term);
+      return normalizedTerm.length > 0 && (` ${text} `).includes(` ${normalizedTerm} `);
+    });
+
   let category: RouteDecision['category'] = 'general';
+  if (hasImages || has('vision')) category = 'vision';
+  else if (has('coding')) category = 'coding';
+  else if (has('reasoning')) category = 'reasoning';
+  else if (has('writing')) category = 'writing';
 
-  if (hasImages) {
-    category = 'vision';
-  } else if (has('codice', 'programma', 'programmazione', 'python', 'javascript', 'typescript', 'react', 'bug', 'errore', 'debug', 'apk', 'android', 'gradle', 'git', 'script', 'funzione', 'classe', 'compila')) {
-    category = 'coding';
-  } else if (has('dimostra', 'confronta', 'analizza', 'ragiona', 'pro e contro', 'strategia', 'piano', 'perché', 'spiegami in dettaglio', 'valuta')) {
-    category = 'reasoning';
-  } else if (has('scrivi', 'riscrivi', 'email', 'messaggio', 'articolo', 'riassumi', 'traduci', 'correggi il testo', 'descrizione')) {
-    category = 'writing';
-  }
-
-  const models = installedModels.filter((model) => typeof model === 'string' && model.trim());
+  const models = Array.isArray(installedModels)
+    ? [...new Set(installedModels
+        .filter((model): model is string => typeof model === 'string' && model.trim().length > 0)
+        .map((model) => model.trim()))]
+    : [];
   const matches = (model: string, patterns: RegExp[]) => patterns.some((pattern) => pattern.test(model));
-  const preference = preferredModel.trim();
+  const preference = typeof preferredModel === 'string' ? preferredModel.trim() : '';
   const find = (patterns: RegExp[]) => models.find((model) => matches(model, patterns));
 
   let selected: string | undefined;
