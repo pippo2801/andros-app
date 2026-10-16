@@ -30,6 +30,7 @@ Aggiornato: 2026-10-16. Questo documento distingue le funzioni presenti nel codi
 - [x] Il workflow `.github/workflows/verify.yml` esegue `npm install` e `npm run build` senza compilare APK.
 - [x] Rimossi dal repository i contenuti generati `node_modules/` e `dist/` e aggiunto `.gitignore`, così le dipendenze e l'output di build non vengono versionati; la build CI ha confermato che il progetto si ricostruisce dal sorgente: [run riuscito](https://github.com/pippo2801/andros-app/actions/runs/38816474774).
 - [x] Trasferimento manuale JSON collegato alle impostazioni: include chat corrente, archivio e regole; valida i pacchetti e impedisce di superare i limiti senza avvisare.
+- [x] L’invio della chat conserva gli spazi iniziali e finali dei prompt (importanti per frammenti di codice), rifiutando soltanto input vuoti o composti da spazi.
 - [x] La memoria permanente impedisce di aggiungere più di 500 regole e verifica il limite di 500 caratteri prima del salvataggio, allineandosi al formato di sincronizzazione.
 - [x] I messaggi riservano spazio al comando Copia e mostrano un avviso accessibile se il browser non riesce a copiare il testo.
 - [x] L’archivio locale rifiuta nuove aggiunte oltre 300 conversazioni invece di scartare automaticamente quelle precedenti.
