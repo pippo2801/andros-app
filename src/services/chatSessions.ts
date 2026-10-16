@@ -252,7 +252,7 @@ export function updateChatSession(
           : session.title)
       : 'Nuova conversazione',
     updatedAt: now,
-  });
+  }).sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
 }
 
 export function togglePinnedChat(sessions: ChatSession[], id: string): ChatSession[] {
@@ -313,5 +313,6 @@ export function renameChatSession(sessions: ChatSession[], id: string, title: st
   if (!normalized) throw new Error('Il titolo della conversazione non può essere vuoto.');
   return sessions.map((session) => session.id === id
     ? { ...session, title: normalized, updatedAt: Date.now() }
-    : session);
+    : session)
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
 }
