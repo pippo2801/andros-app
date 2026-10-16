@@ -313,10 +313,10 @@ export async function parseArchiveUpload(file: File): Promise<ArchivedConversati
   if (file.size > 100 * 1024 * 1024) throw new Error('Il file supera il limite di 100 MB.');
   const name = file.name.toLowerCase();
   if (!name.endsWith('.zip')) return parseArchiveFile(file.name, await file.text());
+  const archiveBytes = new Uint8Array(await file.arrayBuffer());
+  validateZipBeforeExtraction(archiveBytes);
   let files: Record<string, Uint8Array>;
   try {
-    const archiveBytes = new Uint8Array(await file.arrayBuffer());
-    validateZipBeforeExtraction(archiveBytes);
     files = unzipSync(archiveBytes);
   } catch {
     throw new Error('Archivio ZIP non valido o danneggiato.');
