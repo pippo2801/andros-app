@@ -29,7 +29,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
           ? 'bg-blue-600/30 border-blue-500/30 rounded-br-sm' 
           : 'bg-slate-900/90 border-slate-800 rounded-bl-sm'
       }`}>
-        <div className="whitespace-pre-wrap text-sm leading-relaxed">{content}</div>
+        <div className="whitespace-pre-wrap break-words pr-7 pt-5 text-sm leading-relaxed">{content}</div>
         
         <button
           type="button"
