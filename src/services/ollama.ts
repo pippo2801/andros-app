@@ -144,13 +144,22 @@ async function postJson(url: string, data: unknown): Promise<any> {
 export async function checkOllamaConnection(): Promise<string[]> {
   const { endpoint } = getOllamaConfig();
   const data = await getJson(`${endpoint}/api/tags`);
-  if (!data || typeof data !== 'object' || !Array.isArray(data.models)) return [];
-  return data.models
-    .filter((model: unknown): model is { name: string } =>
-      Boolean(model && typeof model === 'object' && !Array.isArray(model) &&
-        typeof (model as Record<string, unknown>).name === 'string' &&
-        Boolean(((model as Record<string, unknown>).name as string).trim())))
-    .map((model: { name: string }) => model.name.trim());
+  if (!data || typeof data !== 'object' || Array.isArray(data) || !Array.isArray(data.models)) {
+    throw new Error('Ollama ha risposto con un formato inatteso: manca l’elenco dei modelli in /api/tags.');
+  }
+
+  // Treat the server response as untrusted input: ignore malformed names and
+  // cap the list so a broken or unexpected endpoint cannot flood the UI.
+  const models = new Set<string>();
+  for (const item of data.models.slice(0, 500)) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const name = (item as Record<string, unknown>).name;
+    if (typeof name !== 'string') continue;
+    const normalized = name.trim();
+    if (!normalized || normalized.length > 200 || /\\s/.test(normalized)) continue;
+    models.add(normalized);
+  }
+  return [...models];
 }
 
 export async function sendToOllama(
