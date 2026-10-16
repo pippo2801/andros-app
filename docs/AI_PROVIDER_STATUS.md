@@ -5,6 +5,7 @@ Aggiornato: 2026-10-16. Questo documento distingue le funzioni presenti nel codi
 ## Provider AI: stato attuale
 
 - [x] **Ollama**: il client Android/Web chiama l'endpoint Ollama configurato e usa il modello locale scelto. Modello predefinito nel codice: `qwen2.5-coder:7b`.
+- [x] **Validazione discovery Ollama**: la risposta `/api/tags` viene controllata; nomi modello vuoti, malformati, troppo lunghi o con spazi vengono ignorati, i duplicati rimossi e la lista limitata a 500 voci. Una risposta con formato inatteso produce un errore esplicito invece di apparire come lista vuota.
 - [x] **Google Gemini**: chiamata diretta a Gemini API con chiave fornita dall'utente; la chiave è conservata nella sessione, non come segreto incorporato nell'app.
 - [x] **Router locale deterministico**: seleziona un modello Ollama installato in base alla categoria stimata della richiesta. Il matching è a parole chiave normalizzate, non una comprensione semantica completa.
 - [x] **Fallback in modalità automatica**: il codice prova l'altro provider configurato quando il primo fallisce e le condizioni lo consentono.
