@@ -35,6 +35,7 @@ Aggiornato: 2026-10-16. Questo documento distingue le funzioni presenti nel codi
 - [x] La memoria permanente impedisce di aggiungere più di 500 regole e verifica il limite di 500 caratteri prima del salvataggio, allineandosi al formato di sincronizzazione.
 - [x] I messaggi riservano spazio al comando Copia e mostrano un avviso accessibile se il browser non riesce a copiare il testo.
 - [x] I blocchi delimitati da triple backtick vengono visualizzati in pannelli monospaziati con copia dedicata sia nell’intestazione sia in fondo al blocco; il codice viene renderizzato come testo React, senza interpretarlo come HTML.
+- [x] Il testo dei messaggi e il codice consentono la selezione manuale anche se la pagina applica una selezione disattivata come impostazione generale.
 - [x] L’archivio locale rifiuta nuove aggiunte oltre 300 conversazioni invece di scartare automaticamente quelle precedenti.
 - [x] L’importazione JSON/CSV applica limiti espliciti alle conversazioni e ai messaggi; gli ZIP controllano anche il totale aggregato riconosciuto.
 - [x] L’importazione delle conversazioni ChatGPT e dei formati JSON/CSV/testuali non tronca più silenziosamente messaggi troppo lunghi: segnala il limite e interrompe l'importazione, e controlla anche il numero di nodi/messaggi per conversazione.
