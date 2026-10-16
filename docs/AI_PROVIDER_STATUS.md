@@ -37,6 +37,7 @@ Aggiornato: 2026-10-16. Questo documento distingue le funzioni presenti nel codi
 - [x] I messaggi riservano spazio al comando Copia e mostrano un avviso accessibile se il browser non riesce a copiare il testo.
 - [x] I blocchi delimitati da triple backtick vengono visualizzati in pannelli monospaziati con copia dedicata sia nell’intestazione sia in fondo al blocco; il codice viene renderizzato come testo React, senza interpretarlo come HTML.
 - [x] Il testo dei messaggi e il codice consentono la selezione manuale anche se la pagina applica una selezione disattivata come impostazione generale.
+- [x] Ogni messaggio espone un comando Condividi: usa la condivisione nativa quando disponibile e, in caso di indisponibilità o errore, propone la copia del testo; l'annullamento volontario del pannello di condivisione non avvia una copia automatica. La compatibilità resta da verificare nel WebView Android reale.
 - [x] L’archivio locale rifiuta nuove aggiunte oltre 300 conversazioni invece di scartare automaticamente quelle precedenti.
 - [x] L’importazione JSON/CSV applica limiti espliciti alle conversazioni e ai messaggi; gli ZIP controllano anche il totale aggregato riconosciuto.
 - [x] L’importazione delle conversazioni ChatGPT e dei formati JSON/CSV/testuali non tronca più silenziosamente messaggi troppo lunghi: segnala il limite e interrompe l'importazione, e controlla anche il numero di nodi/messaggi per conversazione.
