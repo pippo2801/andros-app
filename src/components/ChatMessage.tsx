@@ -52,7 +52,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
           ? 'bg-blue-600/30 border-blue-500/30 rounded-br-sm' 
           : 'bg-slate-900/90 border-slate-800 rounded-bl-sm'
       }`}>
-        <div className="break-words pt-5 text-sm leading-relaxed">
+        <div className="select-text break-words pt-5 text-sm leading-relaxed">
           {segments.map((segment, index) => {
             const match = segment.match(/^\x60\x60\x60([^\n]*)\n([\s\S]*?)\n?\x60\x60\x60$/);
             if (!match) return <span key={index} className="whitespace-pre-wrap">{segment}</span>;
@@ -68,7 +68,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
                     {isCopied ? 'Copiato' : 'Copia codice'}
                   </button>
                 </div>
-                <pre className="overflow-x-auto p-3 text-xs leading-5 text-slate-100"><code>{code}</code></pre>
+                <pre className="select-text overflow-x-auto p-3 text-xs leading-5 text-slate-100"><code>{code}</code></pre>
                 <div className="flex items-center justify-end border-t border-white/10 px-3 py-1.5">
                   <button type="button" onClick={() => { void copyCodeBlock(code, index); }} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-slate-400 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-400">
                     {isCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
