@@ -200,15 +200,25 @@ export function importAndMergeSyncPackage(pack: SyncPackage): { rulesAdded: numb
     localStorage.setItem(RULES_KEY, JSON.stringify(nextRules));
     saveArchivedConversations(nextArchive);
   } catch (error) {
+    let rollbackFailed = false;
     try {
       if (oldRules === null) localStorage.removeItem(RULES_KEY);
       else localStorage.setItem(RULES_KEY, oldRules);
+    } catch (rollbackError) {
+      rollbackFailed = true;
+      console.error('Ripristino delle regole dopo importazione non riuscito:', rollbackError);
+    }
+    try {
       if (oldArchive === null) localStorage.removeItem('andros.archive.conversations.v1');
       else localStorage.setItem('andros.archive.conversations.v1', oldArchive);
     } catch (rollbackError) {
-      console.error('Ripristino del salvataggio dopo importazione non riuscito:', rollbackError);
+      rollbackFailed = true;
+      console.error('Ripristino dell’archivio dopo importazione non riuscito:', rollbackError);
     }
-    throw error instanceof Error ? error : new Error('Importazione non riuscita; nessun dato è stato intenzionalmente sostituito.');
+    if (rollbackFailed) {
+      throw new Error('Importazione non riuscita e ripristino locale incompleto. Controlla regole permanenti e archivio prima di riprovare.');
+    }
+    throw error instanceof Error ? error : new Error('Importazione non riuscita; i dati locali precedenti sono stati ripristinati.');
   }
   return { rulesAdded, conversationsAdded };
 }
