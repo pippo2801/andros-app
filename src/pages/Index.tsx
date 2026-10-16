@@ -550,8 +550,8 @@ export default function Index() {
                 <textarea value={ruleDraft} onChange={(event) => setRuleDraft(event.target.value)} maxLength={500} rows={3} placeholder="Esempio: prima di modificare file importanti, crea un backup." className="w-full resize-y rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-sm leading-5 text-white outline-none transition focus:border-cyan-400/50" />
               </label>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[10px] text-slate-500">{ruleDraft.length}/500 caratteri</span>
-                <button type="submit" disabled={!ruleDraft.trim()} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"><Plus size={16} /> Salva e approva</button>
+                <span className="text-[10px] text-slate-500">{ruleDraft.length}/500 caratteri · {memoryRules.length}/{MAX_MEMORY_RULES} regole</span>
+                <button type="submit" disabled={!ruleDraft.trim() || memoryRules.length >= MAX_MEMORY_RULES} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"><Plus size={16} /> Salva e approva</button>
               </div>
             </form>
 
