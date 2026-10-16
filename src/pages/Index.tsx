@@ -113,6 +113,19 @@ export default function Index() {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, loading]);
 
+  useEffect(() => {
+    if (!settingsOpen && !memoryOpen && !archiveOpen && !googleOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setSettingsOpen(false);
+      setMemoryOpen(false);
+      setArchiveOpen(false);
+      setGoogleOpen(false);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [settingsOpen, memoryOpen, archiveOpen, googleOpen]);
+
   const setActiveMessages = (nextMessages: ChatMessageData[]) => {
     setSessions((current) => updateChatSession(current, activeChatId, nextMessages));
   };
