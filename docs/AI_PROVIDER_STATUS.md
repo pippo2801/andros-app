@@ -65,6 +65,7 @@ Decisione tecnica:
 - [x] Codice client Ollama presente.
 - [x] Integrazione diretta Gemini presente.
 - [x] Salvataggio locale delle conversazioni e regole permanenti presente nel codice.
+- [x] La schermata memoria mostra il conteggio delle regole nel formato `correnti/500` e disabilita il salvataggio quando la capacità è esaurita.
 - [x] Conferme prima della cancellazione della chat implementate in `main`.
 - [ ] Build Android verificata sul commit finale e artefatto installato sul POCO.
 - [ ] Test manuali: avvio senza rete, Ollama raggiungibile/non raggiungibile, Gemini con chiave valida/non valida, cambio provider e recupero errori.
