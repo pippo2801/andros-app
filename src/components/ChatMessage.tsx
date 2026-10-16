@@ -9,15 +9,20 @@ interface ChatMessageProps {
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   const handleCopy = async () => {
+    setCopyFailed(false);
     try {
       const success = await copyToClipboard(content);
       if (success) {
         setCopied(true);
         window.setTimeout(() => setCopied(false), 2000);
+      } else {
+        setCopyFailed(true);
       }
     } catch (error) {
+      setCopyFailed(true);
       console.warn('Impossibile copiare il messaggio negli appunti:', error);
     }
   };
@@ -30,6 +35,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ content, role }) => {
           : 'bg-slate-900/90 border-slate-800 rounded-bl-sm'
       }`}>
         <div className="whitespace-pre-wrap break-words pr-7 pt-5 text-sm leading-relaxed">{content}</div>
+        {copyFailed && <p role="status" className="mt-2 text-xs text-rose-300">Copia non riuscita. Riprova o seleziona il testo.</p>}
         
         <button
           type="button"
