@@ -32,6 +32,7 @@ import {
 } from '../services/chatSessions';
 
 const RULES_KEY = 'andros.memory.rules.v1';
+const MAX_MEMORY_RULES = 500;
 
 interface MemoryRule {
   id: string;
@@ -198,6 +199,14 @@ export default function Index() {
   const handleSaveRule = () => {
     const text = ruleDraft.trim();
     if (!text) return;
+    if (memoryRules.length >= MAX_MEMORY_RULES) {
+      setNotice(`La memoria ha raggiunto il limite di ${MAX_MEMORY_RULES} regole. Elimina una regola prima di aggiungerne un’altra.`);
+      return;
+    }
+    if (text.length > 500) {
+      setNotice('Ogni regola può contenere al massimo 500 caratteri.');
+      return;
+    }
     if (memoryRules.some((rule) => rule.text.toLocaleLowerCase() === text.toLocaleLowerCase())) {
       setNotice('Questa regola è già presente nella memoria.');
       return;
