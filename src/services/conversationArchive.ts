@@ -21,6 +21,67 @@ const MAX_ID_LENGTH = 200;
 const MAX_TITLE_LENGTH = 200;
 const MAX_SOURCE_LENGTH = 100;
 
+const MAX_ZIP_ENTRIES = 5000;
+const MAX_ZIP_EXPANDED_BYTES = 200 * 1024 * 1024;
+
+/** Check ZIP central-directory size metadata before decompressing untrusted files. */
+function validateZipBeforeExtraction(bytes: Uint8Array): void {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const minimumEocd = 22;
+  const maxComment = 0xffff;
+  const searchStart = Math.max(0, bytes.length - minimumEocd - maxComment);
+  let eocd = -1;
+  for (let offset = bytes.length - minimumEocd; offset >= searchStart; offset--) {
+    if (view.getUint32(offset, true) === 0x06054b50) {
+      const commentLength = view.getUint16(offset + 20, true);
+      if (offset + minimumEocd + commentLength === bytes.length) {
+        eocd = offset;
+        break;
+      }
+    }
+  }
+  if (eocd < 0) throw new Error('Archivio ZIP non valido: intestazione finale non trovata.');
+  const entriesOnDisk = view.getUint16(eocd + 8, true);
+  const totalEntries = view.getUint16(eocd + 10, true);
+  const centralSize = view.getUint32(eocd + 12, true);
+  const centralOffset = view.getUint32(eocd + 16, true);
+  if (entriesOnDisk === 0xffff || totalEntries === 0xffff ||
+      centralSize === 0xffffffff || centralOffset === 0xffffffff) {
+    throw new Error('Gli archivi ZIP64 non sono supportati per motivi di sicurezza. Dividi l’archivio e riprova.');
+  }
+  if (entriesOnDisk !== totalEntries || totalEntries > MAX_ZIP_ENTRIES ||
+      centralOffset + centralSize > eocd || centralOffset + centralSize > bytes.length) {
+    throw new Error(`Lo ZIP supera il limite di ${MAX_ZIP_ENTRIES} file o ha una directory non valida.`);
+  }
+  let offset = centralOffset;
+  let expandedBytes = 0;
+  for (let index = 0; index < totalEntries; index++) {
+    if (offset + 46 > centralOffset + centralSize || view.getUint32(offset, true) !== 0x02014b50) {
+      throw new Error('Archivio ZIP non valido: directory dei file danneggiata.');
+    }
+    const compressedSize = view.getUint32(offset + 20, true);
+    const uncompressedSize = view.getUint32(offset + 24, true);
+    const nameLength = view.getUint16(offset + 28, true);
+    const extraLength = view.getUint16(offset + 30, true);
+    const commentLength = view.getUint16(offset + 32, true);
+    if (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff) {
+      throw new Error('Gli archivi ZIP64 non sono supportati per motivi di sicurezza.');
+    }
+    const next = offset + 46 + nameLength + extraLength + commentLength;
+    if (next > centralOffset + centralSize || next <= offset) {
+      throw new Error('Archivio ZIP non valido: dimensioni dei metadati non valide.');
+    }
+    expandedBytes += uncompressedSize;
+    if (!Number.isSafeInteger(expandedBytes) || expandedBytes > MAX_ZIP_EXPANDED_BYTES) {
+      throw new Error('Lo ZIP supera 200 MB una volta estratto. Dividi l’archivio e riprova.');
+    }
+    offset = next;
+  }
+  if (offset !== centralOffset + centralSize) {
+    throw new Error('Archivio ZIP non valido: dimensione della directory incoerente.');
+  }
+}
+
 function requireMessageLength(content: string): string {
   if (content.length > MAX_MESSAGE_LENGTH) {
     throw new Error(`Un messaggio supera il limite di ${MAX_MESSAGE_LENGTH} caratteri. Il contenuto non è stato troncato: l'importazione è stata interrotta per evitare perdita di dati.`);
@@ -254,13 +315,15 @@ export async function parseArchiveUpload(file: File): Promise<ArchivedConversati
   if (!name.endsWith('.zip')) return parseArchiveFile(file.name, await file.text());
   let files: Record<string, Uint8Array>;
   try {
-    files = unzipSync(new Uint8Array(await file.arrayBuffer()));
+    const archiveBytes = new Uint8Array(await file.arrayBuffer());
+    validateZipBeforeExtraction(archiveBytes);
+    files = unzipSync(archiveBytes);
   } catch {
     throw new Error('Archivio ZIP non valido o danneggiato.');
   }
   const entries = Object.entries(files).filter(([path]) => !path.startsWith('__MACOSX/') && !path.endsWith('/'));
   const expandedBytes = entries.reduce((total, [, bytes]) => total + bytes.byteLength, 0);
-  if (entries.length > 5000 || expandedBytes > 200 * 1024 * 1024) {
+  if (entries.length > MAX_ZIP_ENTRIES || expandedBytes > MAX_ZIP_EXPANDED_BYTES) {
     throw new Error('Lo ZIP contiene troppi file o supera 200 MB una volta estratto. Dividi l’archivio e riprova.');
   }
   const chatJson = entries.filter(([path]) => /(^|\/)conversations(?:_\d+)?\.json$/i.test(path));
