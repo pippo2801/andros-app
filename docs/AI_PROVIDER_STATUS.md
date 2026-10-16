@@ -26,6 +26,12 @@ Aggiornato: 2026-10-16. Questo documento distingue le funzioni presenti nel codi
 - [x] Prima della decompressione ZIP, Andros legge la directory centrale e rifiuta metadati incoerenti, ZIP64 non supportati, più di 5.000 voci o una dimensione espansa dichiarata oltre 200 MB; resta comunque necessario testare archivi ostili e casi limite della libreria di decompressione.
 - [ ] **Limiti di spazio e grandi archivi**: testare dimensioni, errori di quota e recupero dopo interruzioni prima di affidarsi alla sincronizzazione come unico backup.
 
+## Ultima verifica del repository
+
+- [x] Il commit `e1a73a90c11a8e31d8fa784fd0e73e69d6dbb46c` su `main` ha completato con esito positivo il workflow di verifica: [run GitHub Actions](https://github.com/pippo2801/andros-app/actions/runs/38870985837).
+- [x] La verifica copre l'installazione delle dipendenze e la build web Vite. Non è una prova automatica di correttezza TypeScript completa, non esegue test end-to-end e non dimostra il funzionamento di Ollama, OAuth o Web Share sul telefono.
+- [x] Il workflow di verifica non crea APK. Nessun APK è stato generato in questo ciclo.
+
 ## CI e creazione APK
 
 - [x] Il workflow `.github/workflows/build-apk.yml` è manuale (`workflow_dispatch`): i normali commit non devono creare APK.
